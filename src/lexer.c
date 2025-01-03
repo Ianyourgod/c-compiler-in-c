@@ -109,6 +109,8 @@ char* token_to_string(Token token) {
             return "INT";
         case TokenType_SEMICOLON:
             return "SEMICOLON";
+        default:
+            return "Unknown";
     }
 }
 
@@ -121,6 +123,8 @@ void token_free(Token token) {
     switch (token.type) {
         case TokenType_IDENTIFIER:
             free(token.value.identifier);
+            break;
+        default:
             break;
     }
 }

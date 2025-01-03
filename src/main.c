@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "code_gen.h"
+#include "emitter.h"
 
 struct Args {
     int input_length;
@@ -56,10 +57,9 @@ struct Args parse_args(int argc, char** argv) {
     return args;
 }
 
-int compile(char* input) {
+char* compile(char* input) {
     Lexer lexer = lexer_new(input);
 
-    // collect list of tokens. currently it just reallocs the list pretty often, which is not efficient, so in the future we should probably use a linked list or something
     Token* tokens = malloc(sizeof(Token));
     int token_count = 0;
     int length = 1;
@@ -80,7 +80,22 @@ int compile(char* input) {
 
     CodegenProgram codegen_program = codegen_generate_program(program);
 
-    return 0;
+    char* output = emit_program(codegen_program);
+
+    return output;
+}
+
+void assemble(char* path, char* output) {
+    char* command = malloc(strlen(path) + 17);
+    sprintf(command, "./assembler %s -o %s", path, output);
+    int out = system(command);
+
+    if (out != 0) {
+        fprintf(stderr, "Could not assemble file: %s\n%d\n", path, out);
+        exit(1);
+    }
+
+    free(command);
 }
 
 char* read_file(char* path) {
@@ -95,7 +110,13 @@ char* read_file(char* path) {
     fseek(file, 0, SEEK_SET);
 
     char* buffer = malloc(length + 1);
-    fread(buffer, 1, length, file);
+    size_t frreeeead = fread(buffer, 1, length, file);
+
+    if (frreeeead != length) {
+        fprintf(stderr, "Could not read file: %s\n", path);
+        exit(1);
+    }
+
     buffer[length] = '\0';
 
     fclose(file);
@@ -103,12 +124,87 @@ char* read_file(char* path) {
     return buffer;
 }
 
+int quick_log10(int n) {
+    int log = 0;
+    while (n > 0) {
+        n /= 10;
+        log++;
+    }
+    return log;
+}
+
 int main(int argc, char** argv) {
     struct Args args = parse_args(argc, argv);
 
-    for (int i = 0; i < args.input_length; i++) {
-        compile(read_file(args.inputs[i]));
+    char* assembly_output_file = malloc(sizeof(char) * strlen(args.output) + 3);
+    sprintf(assembly_output_file, "%s.s", args.output);
+
+    // clear output file
+    FILE* file = fopen(assembly_output_file, "w");
+    if (file == NULL) {
+        fprintf(stderr, "Could not open file: %s\n", assembly_output_file);
+        exit(1);
     }
+
+    fclose(file);
+
+    FILE* output_file = fopen(assembly_output_file, "a");
+    if (output_file == NULL) {
+        fprintf(stderr, "Could not open file: %s\n", assembly_output_file);
+        exit(1);
+    }
+
+     // the code we need to add:
+    /*
+    we need to setup the stack
+    we need to call main
+    we need to get the exit code
+    we need to render it
+    */
+
+   char* adding =
+"ldi r14 65534\n"
+"ldi r15 65534\n"
+"call main\n"
+"ldi r3 48\n"
+"ldi r4 10\n"
+"ldi r6 ...render_exit_code\n"
+"...render_exit_code:\n"
+"mod r1 r4 r5\n"
+"add r5 r3 r5\n"
+"pout r5\n"
+"div r1 r4 r1\n"
+"jc > r1 r0 r6\n"
+"hlt\n";
+
+    fprintf(output_file, "%s", adding);
+
+    fclose(output_file);
+
+    for (int i = 0; i < args.input_length; i++) {
+        char* input = read_file(args.inputs[i]);
+        char* output = compile(input);
+
+        FILE* file = fopen(assembly_output_file, "a");
+        if (file == NULL) {
+            fprintf(stderr, "Could not open file: %s\n", assembly_output_file);
+            exit(1);
+        }
+
+        fprintf(file, "%s", output);
+
+        fclose(file);
+
+        free(input);
+        free(output);
+    }
+
+    assemble(assembly_output_file, args.output);
+
+    // delete the assembly file
+    //remove(assembly_output_file);
+
+    free(assembly_output_file);
 
     free(args.inputs);
 

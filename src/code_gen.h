@@ -2,7 +2,7 @@
 #define CODE_GEN_H
 
 #include "parser.h"
-#include "vec.h"
+#include "easy_stuff.h"
 
 typedef enum CodegenOperandType {
     CodegenOperandType_REGISTER,
@@ -20,7 +20,7 @@ typedef struct CodegenOperand {
 } CodegenOperand;
 
 typedef enum CodegenInstructionType {
-    CodegenInstructionType_MOV,
+    CodegenInstructionType_LDI,
     CodegenInstructionType_RET,
 } CodegenInstructionType;
 
@@ -28,7 +28,7 @@ typedef union CodegenInstructionValue {
     struct {
         CodegenOperand destination;
         CodegenOperand source;
-    } mov;
+    } ldi;
 } CodegenInstructionValue;
 
 typedef struct CodegenInstruction {

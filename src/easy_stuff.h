@@ -18,4 +18,6 @@
 #define vec_free(vec) \
     free((vec).data)
 
+int quick_log10(int n);
+
 #endif

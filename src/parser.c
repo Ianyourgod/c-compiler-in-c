@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "parser.h"
+#include "easy_stuff.h"
 
 Parser parser_new(Token* tokens) {
     Parser parser = {tokens, 0};
@@ -62,6 +63,9 @@ Statement parser_parse_statement(Parser* parser) {
                 exit(1);
             }
             break;
+        default:
+            fprintf(stderr, "Unexpected token %d\n", token.type);
+            exit(1);
     }
 
     return statement;
@@ -106,16 +110,9 @@ char* statement_to_string(Statement statement) {
             char* string = malloc(strlen(expression) + 9);
             sprintf(string, "return %s;", expression);
             return string;
+        default:
+            return NULL;
     }
-}
-
-int quick_log10(int n) {
-    int log = 0;
-    while (n > 0) {
-        n /= 10;
-        log++;
-    }
-    return log;
 }
 
 char* expression_to_string(Expression expression) {
@@ -124,6 +121,8 @@ char* expression_to_string(Expression expression) {
             char* string = malloc(quick_log10(expression.value.integer) + 1);
             sprintf(string, "%d", expression.value.integer);
             return string;
+        default:
+            return NULL;
     }
 }
 
@@ -168,6 +167,8 @@ void parser_expect_token(Parser* parser, Token tk) {
                 fprintf(stderr, "Expected integer %d, got %d\n", tk.value.integer, parser->tokens[parser->index].value.integer);
                 exit(1);
             }
+            break;
+        default:
             break;
     }
 

@@ -25,10 +25,10 @@ void codegen_generate_statement(Statement statement, CodegenFunctionBody* instru
     switch (statement.type) {
         case StatementType_RETURN: {
             CodegenInstruction mov_instruction = {
-                .type = CodegenInstructionType_MOV,
+                .type = CodegenInstructionType_LDI,
                 .value = {
-                    .mov = {
-                        .destination = {CodegenOperandType_REGISTER, .value.reg = 0},
+                    .ldi = {
+                        .destination = {CodegenOperandType_REGISTER, .value.reg = 1},
                         .source = codegen_generate_expression(*statement.value.return_statement, instructions),
                     },
                 },
@@ -53,5 +53,7 @@ CodegenOperand codegen_generate_expression(Expression expression, CodegenFunctio
             CodegenOperand operand = {CodegenOperandType_IMMEDIATE, .value.immediate = expression.value.integer};
             return operand;
         }
+        default:
+            return (CodegenOperand){0};
     }
 }
