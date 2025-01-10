@@ -53,6 +53,18 @@ Token lexer_next_token(Lexer* lexer) {
                 } else {
                     return token_new(TokenType_HYPHEN, (TokenValue){0});
                 }
+            case '+':
+                lexer->current++;
+                return token_new(TokenType_ADD, (TokenValue){0});
+            case '*':
+                lexer->current++;
+                return token_new(TokenType_MUL, (TokenValue){0});
+            case '/':
+                lexer->current++;
+                return token_new(TokenType_DIV, (TokenValue){0});
+            case '%':
+                lexer->current++;
+                return token_new(TokenType_PERCENT, (TokenValue){0});
             default:
                 if (can_start_identifier(c)) {
                     char* start = lexer->current;
@@ -131,11 +143,6 @@ char* token_to_string(Token token) {
         default:
             return "Unknown";
     }
-}
-
-Token token_new(TokenType type, TokenValue value) {
-    Token token = {type, value};
-    return token;
 }
 
 void token_free(Token token) {

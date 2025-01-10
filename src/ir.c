@@ -83,6 +83,48 @@ IRVal ir_generate_expression(IRGenerator* generator, Expression expression, IRFu
 
             return dst;
         }
+        case ExpressionType_BINARY: {
+            IRVal left = ir_generate_expression(generator, *expression.value.binary.left, instructions);
+            IRVal right = ir_generate_expression(generator, *expression.value.binary.right, instructions);
+            IRVal dst = ir_make_temp(generator);
+
+            IRBinaryOp op;
+            switch (expression.value.binary.type) {
+                case ExpressionBinaryType_ADD:
+                    op = IRBinaryOp_Add;
+                    break;
+                case ExpressionBinaryType_SUBTRACT:
+                    op = IRBinaryOp_Subtract;
+                    break;
+                case ExpressionBinaryType_MULTIPLY:
+                    op = IRBinaryOp_Multiply;
+                    break;
+                case ExpressionBinaryType_DIVIDE:
+                    op = IRBinaryOp_Divide;
+                    break;
+                case ExpressionBinaryType_MOD:
+                    op = IRBinaryOp_Mod;
+                    break;
+                default:
+                    return (IRVal){0};
+            }
+
+            IRInstruction instruction = {
+                .type = IRInstructionType_Binary,
+                .value = {
+                    .binary = {
+                        .op = op,
+                        .left = left,
+                        .right = right,
+                        .dst = dst,
+                    },
+                },
+            };
+
+            vec_push(*instructions, instruction);
+
+            return dst;
+        }
         default:
             return (IRVal){0};
     }

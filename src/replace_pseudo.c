@@ -58,6 +58,11 @@ CodegenInstruction replace_pseudo_instruction(CodegenInstruction instruction, Ps
             instruction.value.unary.src = replace_pseudo_operand(instruction.value.unary.src, map);
             instruction.value.unary.dst = replace_pseudo_operand(instruction.value.unary.dst, map);
             break;
+        case CodegenInstructionType_BINARY:
+            instruction.value.binary.left = replace_pseudo_operand(instruction.value.binary.left, map);
+            instruction.value.binary.right = replace_pseudo_operand(instruction.value.binary.right, map);
+            instruction.value.binary.dst = replace_pseudo_operand(instruction.value.binary.dst, map);
+            break;
         case CodegenInstructionType_LOD:
         case CodegenInstructionType_STR:
             instruction.value.mem.address = replace_pseudo_operand(instruction.value.mem.address, map);

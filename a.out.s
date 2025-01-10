@@ -18,3 +18,10 @@ pop r5
 pout r5
 jc < r14 r15 r6 
 hlt
+main:
+ldi r10 28
+ldi r11 3
+mod r10 r11 r12
+str r15 r12 -4
+lod r15 r1 -4
+ret

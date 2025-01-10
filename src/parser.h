@@ -28,6 +28,7 @@ typedef struct Statement {
 typedef enum ExpressionType {
     ExpressionType_INT,
     ExpressionType_UNARY,
+    ExpressionType_BINARY,
 } ExpressionType;
 
 struct Expression;
@@ -42,9 +43,24 @@ struct ExpressionUnary {
     struct Expression* expression;
 };
 
+enum ExpressionBinaryType {
+    ExpressionBinaryType_ADD,
+    ExpressionBinaryType_SUBTRACT,
+    ExpressionBinaryType_MULTIPLY,
+    ExpressionBinaryType_DIVIDE,
+    ExpressionBinaryType_MOD,
+};
+
+struct ExpressionBinary {
+    enum ExpressionBinaryType type;
+    struct Expression* left;
+    struct Expression* right;
+};
+
 typedef union ExpressionValue {
     int integer;
     struct ExpressionUnary unary;
+    struct ExpressionBinary binary;
 } ExpressionValue;
 
 typedef struct Expression {
@@ -61,7 +77,8 @@ Parser parser_new(Token* tokens);
 ParserProgram parser_parse(Parser* parser);
 ParserFunctionDefinition parser_parse_function(Parser* parser);
 Statement parser_parse_statement(Parser* parser);
-Expression parser_parse_expression(Parser* parser);
+Expression parser_parse_expression(Parser* parser, int min_prec);
+Expression parser_parse_factor(Parser* parser);
 
 char* program_to_string(ParserProgram program);
 char* function_definition_to_string(ParserFunctionDefinition function);

@@ -258,6 +258,15 @@ void handle_mov_like(CodegenInstruction instruction, CodegenFunctionBody* body) 
     }
 }
 
+int move_to_reg_if_not(CodegenOperand op, int target_reg, CodegenFunctionBody* body) {
+    if (is_reg(op.type)) {
+        return op.value.num;
+    } else {
+        move_to_reg(op, target_reg, body);
+        return target_reg;
+    }
+}
+
 void fixup_instruction(CodegenInstruction instruction, CodegenFunctionBody* body) {
     switch (instruction.type) {
         case CodegenInstructionType_LDI:
@@ -304,6 +313,58 @@ void fixup_instruction(CodegenInstruction instruction, CodegenFunctionBody* body
 
             if (!is_reg(instruction.value.unary.dst.type)) {
                 reg_to_mem(11, instruction.value.unary.dst.value.num, body);
+            }
+
+            break;
+        }
+
+        case CodegenInstructionType_BINARY: {
+            int left_reg = move_to_reg_if_not(instruction.value.binary.left, 10, body);
+            int right_reg = move_to_reg_if_not(instruction.value.binary.right, 11, body);
+
+            int dst_reg = instruction.value.binary.dst.value.num;
+            if (!is_reg(instruction.value.binary.dst.type)) {
+                dst_reg = 12;
+            }
+
+            CodegenInstruction binary = {
+                .type = CodegenInstructionType_BINARY,
+                .value = {
+                    .binary = {
+                        .op = instruction.value.binary.op,
+                        .left = {
+                            .type = CodegenOperandType_REGISTER,
+                            .value = {
+                                .num = left_reg,
+                            },
+                        },
+                        .right = {
+                            .type = CodegenOperandType_REGISTER,
+                            .value = {
+                                .num = right_reg,
+                            },
+                        },
+                        .dst = {
+                            .type = CodegenOperandType_REGISTER,
+                            .value = {
+                                .num = dst_reg,
+                            },
+                        },
+                    },
+                },
+            };
+
+            vecptr_push(body, binary);
+
+            if (!is_reg(instruction.value.binary.dst.type)) {
+                switch (instruction.value.binary.dst.type) {
+                    case CodegenOperandType_STACK:
+                        reg_to_mem(12, instruction.value.binary.dst.value.num, body);
+                        break;
+                    default:
+                        fprintf(stderr, "Unexpected operand type\n");
+                        exit(1);
+                }
             }
 
             break;

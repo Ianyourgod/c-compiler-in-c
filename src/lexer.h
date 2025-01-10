@@ -14,6 +14,10 @@ typedef enum TokenType {
     TokenType_TILDE,
     TokenType_HYPHEN,
     TokenType_DECREMENT,
+    TokenType_ADD,
+    TokenType_MUL,
+    TokenType_DIV,
+    TokenType_PERCENT,
 } TokenType;
 
 typedef enum KeywordType {
@@ -43,7 +47,7 @@ Token lexer_next_token(Lexer* lexer);
 Token lexer_peek(Lexer* lexer);
 
 char* token_to_string(Token token);
-Token token_new(TokenType type, TokenValue value);
+#define token_new(type, value) ((Token) { type, value })
 
 void token_free(Token token);
 

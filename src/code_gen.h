@@ -29,12 +29,21 @@ typedef enum CodegenInstructionType {
     CodegenInstructionType_RET,
     CodegenInstructionType_LOD,
     CodegenInstructionType_STR,
+    CodegenInstructionType_BINARY,
 } CodegenInstructionType;
 
 typedef enum CodegenUnaryOp {
     CodegenUnaryOp_NEG,
     CodegenUnaryOp_NOT,
 } CodegenUnaryOp;
+
+typedef enum CodegenBinaryOp {
+    CodegenBinaryOp_ADD,
+    CodegenBinaryOp_SUB,
+    CodegenBinaryOp_MUL,
+    CodegenBinaryOp_DIV,
+    CodegenBinaryOp_MOD,
+} CodegenBinaryOp;
 
 typedef union CodegenInstructionValue {
     struct {
@@ -52,6 +61,12 @@ typedef union CodegenInstructionValue {
         CodegenOperand src;
         CodegenOperand dst;
     } unary;
+    struct {
+        CodegenBinaryOp op;
+        CodegenOperand left;
+        CodegenOperand right;
+        CodegenOperand dst;
+    } binary;
 } CodegenInstructionValue;
 
 typedef struct CodegenInstruction {

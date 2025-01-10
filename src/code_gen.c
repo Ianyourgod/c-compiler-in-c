@@ -79,6 +79,50 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
 
             break;
         }
+        case IRInstructionType_Binary: {
+            CodegenOperand left = codegen_convert_val(instruction.value.binary.left, instructions);
+            CodegenOperand right = codegen_convert_val(instruction.value.binary.right, instructions);
+            CodegenOperand dst = codegen_convert_val(instruction.value.binary.dst, instructions);
+
+            CodegenBinaryOp op;
+            switch (instruction.value.binary.op) {
+                case IRBinaryOp_Add:
+                    op = CodegenBinaryOp_ADD;
+                    break;
+                case IRBinaryOp_Subtract:
+                    op = CodegenBinaryOp_SUB;
+                    break;
+                case IRBinaryOp_Multiply:
+                    op = CodegenBinaryOp_MUL;
+                    break;
+                case IRBinaryOp_Divide:
+                    op = CodegenBinaryOp_DIV;
+                    break;
+                case IRBinaryOp_Mod:
+                    op = CodegenBinaryOp_MOD;
+                    break;
+                
+                default:
+                    op = CodegenBinaryOp_ADD;
+                    break;
+            }
+
+            CodegenInstruction binary_instruction = {
+                .type = CodegenInstructionType_BINARY,
+                .value = {
+                    .binary = {
+                        .op = op,
+                        .left = left,
+                        .right = right,
+                        .dst = dst,
+                    },
+                },
+            };
+
+            vec_push(*instructions, binary_instruction);
+
+            break;
+        }
         default:
             break;
     }

@@ -96,6 +96,43 @@ char* emit_instruction(CodegenInstruction instruction) {
 
             return output;
         }
+        case CodegenInstructionType_BINARY: {
+            char* left = emit_operand(instruction.value.binary.left);
+            char* right = emit_operand(instruction.value.binary.right);
+            char* destination = emit_operand(instruction.value.binary.dst);
+
+            char* output = malloc(strlen(left) + strlen(right) + strlen(destination) + 8);
+
+            char* op;
+
+            switch (instruction.value.binary.op) {
+                case CodegenBinaryOp_ADD:
+                    op = "add";
+                    break;
+                case CodegenBinaryOp_SUB:
+                    op = "sub";
+                    break;
+                case CodegenBinaryOp_MUL:
+                    op = "mul";
+                    break;
+                case CodegenBinaryOp_DIV:
+                    op = "div";
+                    break;
+                case CodegenBinaryOp_MOD:
+                    op = "mod";
+                    break;
+                default:
+                    return NULL;
+            }
+
+            sprintf(output, "%s %s %s %s\n", op, left, right, destination);
+
+            free(left);
+            free(right);
+            free(destination);
+
+            return output;
+        }
         case CodegenInstructionType_ALLOCATE_STACK: {
             char* output = malloc(21 + quick_log10(instruction.value.immediate));
             sprintf(output, "ldi r10 %d\nsub r14 r10\n", instruction.value.immediate);

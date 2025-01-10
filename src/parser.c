@@ -55,7 +55,7 @@ Statement parser_parse_statement(Parser* parser) {
             if (token.value.keyword == Keyword_RETURN) {
                 statement.type = StatementType_RETURN;
                 statement.value.return_statement = malloc(sizeof(Expression));
-                *statement.value.return_statement = parser_parse_expression(parser);
+                *statement.value.return_statement = parser_parse_expression(parser, 0);
                 // expect semicolon
                 parser_expect(parser, TokenType_SEMICOLON);
             } else {
@@ -71,7 +71,73 @@ Statement parser_parse_statement(Parser* parser) {
     return statement;
 }
 
-Expression parser_parse_expression(Parser* parser) {
+int get_precedence(TokenType type) {
+    switch (type) {
+        case TokenType_MUL:
+        case TokenType_DIV:
+        case TokenType_PERCENT:
+            return 50;
+        case TokenType_ADD:
+        case TokenType_HYPHEN:
+            return 45;
+        default:
+            return -1;
+    }
+}
+
+Expression parser_parse_expression(Parser* parser, int min_prec) {
+    Expression left = parser_parse_factor(parser);
+    Token next_token = parser_peek(parser);
+    while (get_precedence(next_token.type) >= min_prec) {
+        enum ExpressionBinaryType type;
+        switch (next_token.type) {
+            case TokenType_ADD:
+                type = ExpressionBinaryType_ADD;
+                break;
+            case TokenType_HYPHEN:
+                type = ExpressionBinaryType_SUBTRACT;
+                break;
+            case TokenType_MUL:
+                type = ExpressionBinaryType_MULTIPLY;
+                break;
+            case TokenType_DIV:
+                type = ExpressionBinaryType_DIVIDE;
+                break;
+            case TokenType_PERCENT:
+                type = ExpressionBinaryType_MOD;
+                break;
+            default:
+                fprintf(stderr, "Unexpected token %d\n", next_token.type);
+                exit(1);
+        }
+
+        parser_next_token(parser);
+
+        Expression right = parser_parse_expression(parser, get_precedence(next_token.type) + 1);
+
+        struct ExpressionBinary binary = {
+            .type = type,
+            .left = malloc(sizeof(Expression)),
+            .right = malloc(sizeof(Expression)),
+        };
+
+        *binary.left = left;
+        *binary.right = right;
+
+        Expression expression = {
+            .type = ExpressionType_BINARY,
+            .value.binary = binary,
+        };
+
+        left = expression;
+
+        next_token = parser_peek(parser);
+    }
+
+    return left;
+}
+
+Expression parser_parse_factor(Parser* parser) {
     Expression expression = {0};
 
     Token token = parser_next_token(parser);
@@ -93,17 +159,18 @@ Expression parser_parse_expression(Parser* parser) {
                 .expression = malloc(sizeof(Expression)),
             };
 
-            *unary.expression = parser_parse_expression(parser);
+            *unary.expression = parser_parse_factor(parser);
 
             expression.type = ExpressionType_UNARY;
             expression.value.unary = unary;
             break;
         }
         case TokenType_LPAREN:
-            expression = parser_parse_expression(parser);
+            expression = parser_parse_expression(parser, 0);
             parser_expect(parser, TokenType_RPAREN);
             break;
         default:
+            printf("t3\n");
             fprintf(stderr, "Unexpected token %d\n", token.type);
             exit(1);
     }

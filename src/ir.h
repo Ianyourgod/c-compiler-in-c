@@ -10,6 +10,7 @@ typedef struct IRProgram {
 
 typedef enum IRInstructionType {
     IRInstructionType_Unary,
+    IRInstructionType_Binary,
     IRInstructionType_Return,
 } IRInstructionType;
 
@@ -33,6 +34,14 @@ typedef enum IRUnaryOp {
     IRUnaryOp_Complement,
 } IRUnaryOp;
 
+typedef enum IRBinaryOp {
+    IRBinaryOp_Add,
+    IRBinaryOp_Subtract,
+    IRBinaryOp_Multiply,
+    IRBinaryOp_Divide,
+    IRBinaryOp_Mod,
+} IRBinaryOp;
+
 typedef union IRInstructionValue {
     IRVal val;
     struct {
@@ -40,6 +49,12 @@ typedef union IRInstructionValue {
         IRVal src;
         IRVal dst;
     } unary;
+    struct {
+        IRBinaryOp op;
+        IRVal left;
+        IRVal right;
+        IRVal dst;
+    } binary;
 } IRInstructionValue;
 
 typedef struct IRInstruction {
