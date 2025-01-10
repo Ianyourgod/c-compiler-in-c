@@ -105,6 +105,21 @@ IRVal ir_generate_expression(IRGenerator* generator, Expression expression, IRFu
                 case ExpressionBinaryType_MOD:
                     op = IRBinaryOp_Mod;
                     break;
+                case ExpressionBinaryType_BITWISE_AND:
+                    op = IRBinaryOp_BitwiseAnd;
+                    break;
+                case ExpressionBinaryType_BITWISE_OR:
+                    op = IRBinaryOp_BitwiseOr;
+                    break;
+                case ExpressionBinaryType_BITWISE_XOR:
+                    op = IRBinaryOp_BitwiseXor;
+                    break;
+                case ExpressionBinaryType_LEFT_SHIFT:
+                    op = IRBinaryOp_LeftShift;
+                    break;
+                case ExpressionBinaryType_RIGHT_SHIFT:
+                    op = IRBinaryOp_RightShift;
+                    break;
                 default:
                     return (IRVal){0};
             }

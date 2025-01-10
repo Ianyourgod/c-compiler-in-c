@@ -65,6 +65,35 @@ Token lexer_next_token(Lexer* lexer) {
             case '%':
                 lexer->current++;
                 return token_new(TokenType_PERCENT, (TokenValue){0});
+            case '&':
+                lexer->current++;
+                return token_new(TokenType_AMPERSAND, (TokenValue){0});
+            case '|':
+                lexer->current++;
+                return token_new(TokenType_BITWISE_OR, (TokenValue){0});
+            case '^':
+                lexer->current++;
+                return token_new(TokenType_BITWISE_XOR, (TokenValue){0});
+            case '<':
+                lexer->current++;
+                if (*lexer->current == '<') {
+                    lexer->current++;
+                    return token_new(TokenType_LEFT_SHIFT, (TokenValue){0});
+                } else {
+                    // panic
+                    fprintf(stderr, "Unexpected character: %c\n", *lexer->current);
+                    exit(1);
+                }
+            case '>':
+                lexer->current++;
+                if (*lexer->current == '>') {
+                    lexer->current++;
+                    return token_new(TokenType_RIGHT_SHIFT, (TokenValue){0});
+                } else {
+                    // panic
+                    fprintf(stderr, "Unexpected character: %c\n", *lexer->current);
+                    exit(1);
+                }
             default:
                 if (can_start_identifier(c)) {
                     char* start = lexer->current;

@@ -18,6 +18,18 @@ typedef enum TokenType {
     TokenType_MUL,
     TokenType_DIV,
     TokenType_PERCENT,
+    TokenType_AMPERSAND,
+    TokenType_BITWISE_OR,
+    TokenType_BITWISE_XOR,
+    TokenType_LEFT_SHIFT,
+    TokenType_RIGHT_SHIFT,
+    /*
+    TokenType_Exclamation,
+    TokenType_AND,
+    TokenType_OR,
+    TokenType_EQUAL,
+    TokenType_NOT_EQUAL,
+    */
 } TokenType;
 
 typedef enum KeywordType {

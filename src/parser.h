@@ -49,6 +49,11 @@ enum ExpressionBinaryType {
     ExpressionBinaryType_MULTIPLY,
     ExpressionBinaryType_DIVIDE,
     ExpressionBinaryType_MOD,
+    ExpressionBinaryType_BITWISE_AND,
+    ExpressionBinaryType_BITWISE_OR,
+    ExpressionBinaryType_BITWISE_XOR,
+    ExpressionBinaryType_LEFT_SHIFT,
+    ExpressionBinaryType_RIGHT_SHIFT,
 };
 
 struct ExpressionBinary {

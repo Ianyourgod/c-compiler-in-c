@@ -101,7 +101,22 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
                 case IRBinaryOp_Mod:
                     op = CodegenBinaryOp_MOD;
                     break;
-                
+                case IRBinaryOp_BitwiseAnd:
+                    op = CodegenBinaryOp_BITWISE_AND;
+                    break;
+                case IRBinaryOp_BitwiseOr:
+                    op = CodegenBinaryOp_BITWISE_OR;
+                    break;
+                case IRBinaryOp_BitwiseXor:
+                    op = CodegenBinaryOp_BITWISE_XOR;
+                    break;
+                case IRBinaryOp_LeftShift:
+                    op = CodegenBinaryOp_LEFT_SHIFT;
+                    break;
+                case IRBinaryOp_RightShift:
+                    op = CodegenBinaryOp_RIGHT_SHIFT;
+                    break;
+
                 default:
                     op = CodegenBinaryOp_ADD;
                     break;

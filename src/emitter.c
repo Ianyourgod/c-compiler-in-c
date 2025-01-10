@@ -121,6 +121,22 @@ char* emit_instruction(CodegenInstruction instruction) {
                 case CodegenBinaryOp_MOD:
                     op = "mod";
                     break;
+                case CodegenBinaryOp_BITWISE_AND:
+                    op = "and";
+                    break;
+                case CodegenBinaryOp_BITWISE_OR:
+                    op = "or";
+                    break;
+                case CodegenBinaryOp_BITWISE_XOR:
+                    op = "xor";
+                    break;
+                case CodegenBinaryOp_LEFT_SHIFT:
+                    op = "shl";
+                    break;
+                case CodegenBinaryOp_RIGHT_SHIFT:
+                    op = "shr";
+                    break;
+
                 default:
                     return NULL;
             }

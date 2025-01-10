@@ -43,6 +43,11 @@ typedef enum CodegenBinaryOp {
     CodegenBinaryOp_MUL,
     CodegenBinaryOp_DIV,
     CodegenBinaryOp_MOD,
+    CodegenBinaryOp_BITWISE_AND,
+    CodegenBinaryOp_BITWISE_OR,
+    CodegenBinaryOp_BITWISE_XOR,
+    CodegenBinaryOp_LEFT_SHIFT,
+    CodegenBinaryOp_RIGHT_SHIFT,
 } CodegenBinaryOp;
 
 typedef union CodegenInstructionValue {

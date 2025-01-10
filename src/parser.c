@@ -80,6 +80,15 @@ int get_precedence(TokenType type) {
         case TokenType_ADD:
         case TokenType_HYPHEN:
             return 45;
+        case TokenType_LEFT_SHIFT:
+        case TokenType_RIGHT_SHIFT:
+            return 40;
+        case TokenType_AMPERSAND:
+            return 25;
+        case TokenType_BITWISE_XOR:
+            return 24;
+        case TokenType_BITWISE_OR:
+            return 23;
         default:
             return -1;
     }
@@ -105,6 +114,21 @@ Expression parser_parse_expression(Parser* parser, int min_prec) {
                 break;
             case TokenType_PERCENT:
                 type = ExpressionBinaryType_MOD;
+                break;
+            case TokenType_AMPERSAND:
+                type = ExpressionBinaryType_BITWISE_AND;
+                break;
+            case TokenType_BITWISE_OR:
+                type = ExpressionBinaryType_BITWISE_OR;
+                break;
+            case TokenType_BITWISE_XOR:
+                type = ExpressionBinaryType_BITWISE_XOR;
+                break;
+            case TokenType_LEFT_SHIFT:
+                type = ExpressionBinaryType_LEFT_SHIFT;
+                break;
+            case TokenType_RIGHT_SHIFT:
+                type = ExpressionBinaryType_RIGHT_SHIFT;
                 break;
             default:
                 fprintf(stderr, "Unexpected token %d\n", next_token.type);

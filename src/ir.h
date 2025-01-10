@@ -40,6 +40,11 @@ typedef enum IRBinaryOp {
     IRBinaryOp_Multiply,
     IRBinaryOp_Divide,
     IRBinaryOp_Mod,
+    IRBinaryOp_BitwiseAnd,
+    IRBinaryOp_BitwiseOr,
+    IRBinaryOp_BitwiseXor,
+    IRBinaryOp_LeftShift,
+    IRBinaryOp_RightShift,
 } IRBinaryOp;
 
 typedef union IRInstructionValue {
