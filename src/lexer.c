@@ -42,6 +42,17 @@ Token lexer_next_token(Lexer* lexer) {
             case ';':
                 lexer->current++;
                 return token_new(TokenType_SEMICOLON, (TokenValue){0});
+            case '~':
+                lexer->current++;
+                return token_new(TokenType_TILDE, (TokenValue){0});
+            case '-':
+                lexer->current++;
+                if (*lexer->current == '-') {
+                    lexer->current++;
+                    return token_new(TokenType_DECREMENT, (TokenValue){0});
+                } else {
+                    return token_new(TokenType_HYPHEN, (TokenValue){0});
+                }
             default:
                 if (can_start_identifier(c)) {
                     char* start = lexer->current;
@@ -94,6 +105,8 @@ char* token_to_string(Token token) {
                     return "Keyword(int)";
                 case Keyword_RETURN:
                     return "Keyword(return)";
+                default:
+                    return "Unknown";
             }
         case TokenType_IDENTIFIER:
             return token.value.identifier;
@@ -109,6 +122,12 @@ char* token_to_string(Token token) {
             return "INT";
         case TokenType_SEMICOLON:
             return "SEMICOLON";
+        case TokenType_TILDE:
+            return "TILDE";
+        case TokenType_HYPHEN:
+            return "HYPHEN";
+        case TokenType_DECREMENT:
+            return "DECREMENT";
         default:
             return "Unknown";
     }

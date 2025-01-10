@@ -11,6 +11,9 @@ typedef enum TokenType {
     TokenType_RBRACE,
     TokenType_INT,
     TokenType_SEMICOLON,
+    TokenType_TILDE,
+    TokenType_HYPHEN,
+    TokenType_DECREMENT,
 } TokenType;
 
 typedef enum KeywordType {

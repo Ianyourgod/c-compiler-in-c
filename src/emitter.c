@@ -47,14 +47,82 @@ char* emit_function_body(CodegenFunctionBody body) {
 char* emit_instruction(CodegenInstruction instruction) {
     switch (instruction.type) {
         case CodegenInstructionType_LDI: {
-            char* destination = emit_operand(instruction.value.ldi.destination);
-            char* source = emit_operand(instruction.value.ldi.source);
+            char* destination = emit_operand(instruction.value.two_op.destination);
+            char* source = emit_operand(instruction.value.two_op.source);
 
             char* output = malloc(strlen(destination) + strlen(source) + 8);
             sprintf(output, "ldi %s %s\n", destination, source);
 
             free(destination);
             free(source);
+
+            return output;
+        }
+        case CodegenInstructionType_MOV: {
+            char* destination = emit_operand(instruction.value.two_op.destination);
+            char* source = emit_operand(instruction.value.two_op.source);
+
+            char* output = malloc(strlen(destination) + strlen(source) + 10);
+            sprintf(output, "add %s r0 %s\n", source, destination);
+
+            free(destination);
+            free(source);
+
+            return output;
+        }
+        case CodegenInstructionType_UNARY: {
+            char* destination = emit_operand(instruction.value.unary.dst);
+            char* source = emit_operand(instruction.value.unary.src);
+
+            char* output = malloc(strlen(destination) + strlen(source) + 7);
+
+            char* op;
+
+            switch (instruction.value.unary.op) {
+                case CodegenUnaryOp_NEG:
+                    op = "neg";
+                    break;
+                case CodegenUnaryOp_NOT:
+                    op = "not";
+                    break;
+                default:
+                    return NULL;
+            }
+
+            sprintf(output, "%s %s %s\n", op, source, destination);
+
+            free(destination);
+            free(source);
+
+            return output;
+        }
+        case CodegenInstructionType_ALLOCATE_STACK: {
+            char* output = malloc(21 + quick_log10(instruction.value.immediate));
+            sprintf(output, "ldi r10 %d\nsub r14 r10\n", instruction.value.immediate);
+
+            return output;
+        }
+        case CodegenInstructionType_LOD: {
+            char* address = emit_operand(instruction.value.mem.address);
+            char* reg = emit_operand(instruction.value.mem.reg);
+
+            char* output = malloc(strlen(address) + strlen(reg) + 8);
+            sprintf(output, "lod %s %s %d\n", address, reg, instruction.value.mem.offset);
+
+            free(address);
+            free(reg);
+
+            return output;
+        }
+        case CodegenInstructionType_STR: {
+            char* address = emit_operand(instruction.value.mem.address);
+            char* reg = emit_operand(instruction.value.mem.reg);
+
+            char* output = malloc(strlen(address) + strlen(reg) + 8);
+            sprintf(output, "str %s %s %d\n", address, reg, instruction.value.mem.offset);
+
+            free(address);
+            free(reg);
 
             return output;
         }
@@ -69,13 +137,13 @@ char* emit_instruction(CodegenInstruction instruction) {
 char* emit_operand(CodegenOperand operand) {
     switch (operand.type) {
         case CodegenOperandType_REGISTER: {
-            char* output = malloc(quick_log10(operand.value.reg) + 2);
-            sprintf(output, "r%d", operand.value.reg);
+            char* output = malloc(quick_log10(operand.value.num) + 2);
+            sprintf(output, "r%d", operand.value.num);
             return output;
         }
         case CodegenOperandType_IMMEDIATE: {
-            char* output = malloc(quick_log10(operand.value.immediate) + 2);
-            sprintf(output, "%d", operand.value.immediate);
+            char* output = malloc(quick_log10(operand.value.num) + 2);
+            sprintf(output, "%d", operand.value.num);
             return output;
         }
         default:

@@ -81,6 +81,28 @@ Expression parser_parse_expression(Parser* parser) {
             expression.type = ExpressionType_INT;
             expression.value.integer = token.value.integer;
             break;
+        case TokenType_HYPHEN:
+        case TokenType_TILDE: {
+            enum ExpressionUnaryType type =
+                token.type == TokenType_HYPHEN ?
+                    ExpressionUnaryType_NEGATE :
+                    ExpressionUnaryType_COMPLEMENT;
+
+            struct ExpressionUnary unary = {
+                .type = type,
+                .expression = malloc(sizeof(Expression)),
+            };
+
+            *unary.expression = parser_parse_expression(parser);
+
+            expression.type = ExpressionType_UNARY;
+            expression.value.unary = unary;
+            break;
+        }
+        case TokenType_LPAREN:
+            expression = parser_parse_expression(parser);
+            parser_expect(parser, TokenType_RPAREN);
+            break;
         default:
             fprintf(stderr, "Unexpected token %d\n", token.type);
             exit(1);
@@ -105,11 +127,12 @@ char* function_definition_to_string(ParserFunctionDefinition function) {
 
 char* statement_to_string(Statement statement) {
     switch (statement.type) {
-        case StatementType_RETURN:
+        case StatementType_RETURN: {
             char* expression = expression_to_string(*statement.value.return_statement);
             char* string = malloc(strlen(expression) + 9);
             sprintf(string, "return %s;", expression);
             return string;
+        }
         default:
             return NULL;
     }
@@ -117,10 +140,12 @@ char* statement_to_string(Statement statement) {
 
 char* expression_to_string(Expression expression) {
     switch (expression.type) {
-        case ExpressionType_INT:
+        case ExpressionType_INT: {
             char* string = malloc(quick_log10(expression.value.integer) + 1);
             sprintf(string, "%d", expression.value.integer);
             return string;
+        }
+        // TODO!
         default:
             return NULL;
     }
@@ -143,8 +168,15 @@ void free_statement(Statement statement) {
             break;
     }
 }
-void free_expression(Expression expression) {
-    // nothing to free
+void free_expression(Expression expr) {
+    switch (expr.type) {
+        case ExpressionType_UNARY:
+            free_expression(*expr.value.unary.expression);
+            free(expr.value.unary.expression);
+            break;
+        default:
+            break;
+    }
 }
 
 void parser_expect_token(Parser* parser, Token tk) {

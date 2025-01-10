@@ -4,7 +4,10 @@
 
 #include "lexer.h"
 #include "parser.h"
+#include "ir.h"
 #include "code_gen.h"
+#include "replace_pseudo.h"
+#include "assembley_fixup.h"
 #include "emitter.h"
 
 struct Args {
@@ -78,10 +81,22 @@ char* compile(char* input) {
     Parser parser = parser_new(tokens);
     ParserProgram program = parser_parse(&parser);
 
-    CodegenProgram codegen_program = codegen_generate_program(program);
+    IRGenerator generator = ir_generator_new();
+    IRProgram ir_program = ir_generate_program(&generator, program);
 
-    char* output = emit_program(codegen_program);
+    printf("pre codegen\n");
+    CodegenProgram codegen_program = codegen_generate_program(ir_program);
 
+    printf("pre replace\n");
+    CodegenProgram replaced_pseudos = replace_pseudo(codegen_program);
+
+    printf("pre fixup\n");
+    CodegenProgram fixed = fixup_program(replaced_pseudos);
+
+    printf("pre emit\n");
+    char* output = emit_program(fixed);
+
+    printf("done\n");
     return output;
 }
 
@@ -106,7 +121,7 @@ char* read_file(char* path) {
     }
 
     fseek(file, 0, SEEK_END);
-    long length = ftell(file);
+    size_t length = (size_t) ftell(file);
     fseek(file, 0, SEEK_SET);
 
     char* buffer = malloc(length + 1);
@@ -169,12 +184,19 @@ int main(int argc, char** argv) {
 "ldi r3 48\n"
 "ldi r4 10\n"
 "ldi r6 ...render_exit_code\n"
+"ldi r14 65534\n"
+"ldi r15 65534\n"
 "...render_exit_code:\n"
 "mod r1 r4 r5\n"
 "add r5 r3 r5\n"
-"pout r5\n"
+"push r5\n"
 "div r1 r4 r1\n"
 "jc > r1 r0 r6\n"
+"ldi r6 ...render_exit_code_1\n"
+"...render_exit_code_1:\n"
+"pop r5\n"
+"pout r5\n"
+"jc < r14 r15 r6 \n"
 "hlt\n";
 
     fprintf(output_file, "%s", adding);

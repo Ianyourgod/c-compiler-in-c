@@ -27,10 +27,24 @@ typedef struct Statement {
 
 typedef enum ExpressionType {
     ExpressionType_INT,
+    ExpressionType_UNARY,
 } ExpressionType;
+
+struct Expression;
+
+enum ExpressionUnaryType {
+    ExpressionUnaryType_COMPLEMENT,
+    ExpressionUnaryType_NEGATE,
+};
+
+struct ExpressionUnary {
+    enum ExpressionUnaryType type;
+    struct Expression* expression;
+};
 
 typedef union ExpressionValue {
     int integer;
+    struct ExpressionUnary unary;
 } ExpressionValue;
 
 typedef struct Expression {
