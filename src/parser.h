@@ -36,6 +36,7 @@ struct Expression;
 enum ExpressionUnaryType {
     ExpressionUnaryType_COMPLEMENT,
     ExpressionUnaryType_NEGATE,
+    ExpressionUnaryType_NOT,
 };
 
 struct ExpressionUnary {
@@ -54,6 +55,14 @@ enum ExpressionBinaryType {
     ExpressionBinaryType_BITWISE_XOR,
     ExpressionBinaryType_LEFT_SHIFT,
     ExpressionBinaryType_RIGHT_SHIFT,
+    ExpressionBinaryType_AND,
+    ExpressionBinaryType_OR,
+    ExpressionBinaryType_EQUAL,
+    ExpressionBinaryType_NOT_EQUAL,
+    ExpressionBinaryType_LESS,
+    ExpressionBinaryType_LESS_EQUAL,
+    ExpressionBinaryType_GREATER,
+    ExpressionBinaryType_GREATER_EQUAL,
 };
 
 struct ExpressionBinary {

@@ -23,13 +23,15 @@ typedef enum TokenType {
     TokenType_BITWISE_XOR,
     TokenType_LEFT_SHIFT,
     TokenType_RIGHT_SHIFT,
-    /*
-    TokenType_Exclamation,
+    TokenType_EXCLAMATION,
     TokenType_AND,
     TokenType_OR,
     TokenType_EQUAL,
     TokenType_NOT_EQUAL,
-    */
+    TokenType_LESS,
+    TokenType_LESS_EQUAL,
+    TokenType_GREATER,
+    TokenType_GREATER_EQUAL,
 } TokenType;
 
 typedef enum KeywordType {

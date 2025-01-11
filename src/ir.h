@@ -12,6 +12,11 @@ typedef enum IRInstructionType {
     IRInstructionType_Unary,
     IRInstructionType_Binary,
     IRInstructionType_Return,
+    IRInstructionType_Copy,
+    IRInstructionType_Jump,
+    IRInstructionType_JumpIfZero,
+    IRInstructionType_JumpIfNotZero,
+    IRInstructionType_Label,
 } IRInstructionType;
 
 typedef enum IRValType {
@@ -32,6 +37,7 @@ typedef struct IRVal {
 typedef enum IRUnaryOp {
     IRUnaryOp_Negate,
     IRUnaryOp_Complement,
+    IRUnaryOp_Not,
 } IRUnaryOp;
 
 typedef enum IRBinaryOp {
@@ -45,6 +51,12 @@ typedef enum IRBinaryOp {
     IRBinaryOp_BitwiseXor,
     IRBinaryOp_LeftShift,
     IRBinaryOp_RightShift,
+    IRBinaryOp_Equal,
+    IRBinaryOp_NotEqual,
+    IRBinaryOp_Less,
+    IRBinaryOp_LessEqual,
+    IRBinaryOp_Greater,
+    IRBinaryOp_GreaterEqual,
 } IRBinaryOp;
 
 typedef union IRInstructionValue {
@@ -60,6 +72,15 @@ typedef union IRInstructionValue {
         IRVal right;
         IRVal dst;
     } binary;
+    struct {
+        IRVal src;
+        IRVal dst;
+    } copy;
+    struct {
+        IRVal val;
+        char* label;
+    } jump_cond;
+    char* label;
 } IRInstructionValue;
 
 typedef struct IRInstruction {

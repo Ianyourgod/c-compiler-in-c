@@ -79,12 +79,101 @@ IRVal ir_generate_expression(IRGenerator* generator, Expression expression, IRFu
                 },
             };
 
-            vec_push(*instructions, instruction);
+            vecptr_push(instructions, instruction);
 
             return dst;
         }
         case ExpressionType_BINARY: {
             IRVal left = ir_generate_expression(generator, *expression.value.binary.left, instructions);
+
+            if (expression.value.binary.type == ExpressionBinaryType_AND || expression.value.binary.type == ExpressionBinaryType_OR) {
+                int is_and = expression.value.binary.type == ExpressionBinaryType_AND;
+                
+                char* false_label = ir_make_temp_name(generator);
+                char* end_label = ir_make_temp_name(generator);
+
+                IRVal dst = ir_make_temp(generator);
+
+                IRInstruction jump_1 = {
+                    .type = is_and ? IRInstructionType_JumpIfZero : IRInstructionType_JumpIfNotZero,
+                    .value = {
+                        .jump_cond = {
+                            .val = left,
+                            .label = false_label,
+                        },
+                    },
+                };
+
+                vecptr_push(instructions, jump_1);
+
+                IRVal right = ir_generate_expression(generator, *expression.value.binary.right, instructions);
+
+                IRInstruction jump_2 = {
+                    .type = is_and ? IRInstructionType_JumpIfZero : IRInstructionType_JumpIfNotZero,
+                    .value = {
+                        .jump_cond = {
+                            .val = right,
+                            .label = false_label,
+                        },
+                    },
+                };
+
+                vecptr_push(instructions, jump_2);
+
+                IRInstruction copy_1 = {
+                    .type = IRInstructionType_Copy,
+                    .value = {
+                        .copy = {
+                            .src = (IRVal){.type = IRValType_Int, .value = {is_and ? 1 : 0}},
+                            .dst = dst,
+                        }
+                    }
+                };
+
+                vecptr_push(instructions, copy_1);
+
+                IRInstruction jump_end = {
+                    .type = IRInstructionType_Jump,
+                    .value = {
+                        .label = end_label,
+                    },
+                };
+
+                vecptr_push(instructions, jump_end);
+
+                IRInstruction false_label_instruction = {
+                    .type = IRInstructionType_Label,
+                    .value = {
+                        .label = false_label,
+                    },
+                };
+
+                vecptr_push(instructions, false_label_instruction);
+
+                IRInstruction copy_2 = {
+                    .type = IRInstructionType_Copy,
+                    .value = {
+                        .copy = {
+                            .src = (IRVal){.type = IRValType_Int, .value = {is_and ? 0 : 1}},
+                            .dst = dst,
+                        }
+                    }
+                };
+
+                vecptr_push(instructions, copy_2);
+
+                IRInstruction end_label_instruction = {
+                    .type = IRInstructionType_Label,
+                    .value = {
+                        .label = end_label,
+                    },
+                };
+
+                vecptr_push(instructions, end_label_instruction);
+
+                return dst;
+            }
+
             IRVal right = ir_generate_expression(generator, *expression.value.binary.right, instructions);
             IRVal dst = ir_make_temp(generator);
 
@@ -120,6 +209,24 @@ IRVal ir_generate_expression(IRGenerator* generator, Expression expression, IRFu
                 case ExpressionBinaryType_RIGHT_SHIFT:
                     op = IRBinaryOp_RightShift;
                     break;
+                case ExpressionBinaryType_EQUAL:
+                    op = IRBinaryOp_Equal;
+                    break;
+                case ExpressionBinaryType_NOT_EQUAL:
+                    op = IRBinaryOp_NotEqual;
+                    break;
+                case ExpressionBinaryType_LESS:
+                    op = IRBinaryOp_Less;
+                    break;
+                case ExpressionBinaryType_LESS_EQUAL:
+                    op = IRBinaryOp_LessEqual;
+                    break;
+                case ExpressionBinaryType_GREATER:
+                    op = IRBinaryOp_Greater;
+                    break;
+                case ExpressionBinaryType_GREATER_EQUAL:
+                    op = IRBinaryOp_GreaterEqual;
+                    break;
                 default:
                     return (IRVal){0};
             }
@@ -136,7 +243,7 @@ IRVal ir_generate_expression(IRGenerator* generator, Expression expression, IRFu
                 },
             };
 
-            vec_push(*instructions, instruction);
+            vecptr_push(instructions, instruction);
 
             return dst;
         }

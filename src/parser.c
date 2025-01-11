@@ -83,6 +83,14 @@ int get_precedence(TokenType type) {
         case TokenType_LEFT_SHIFT:
         case TokenType_RIGHT_SHIFT:
             return 40;
+        case TokenType_LESS:
+        case TokenType_LESS_EQUAL:
+        case TokenType_GREATER:
+        case TokenType_GREATER_EQUAL:
+            return 35;
+        case TokenType_EQUAL:
+        case TokenType_NOT_EQUAL:
+            return 30;
         case TokenType_AMPERSAND:
             return 25;
         case TokenType_BITWISE_XOR:
@@ -130,6 +138,30 @@ Expression parser_parse_expression(Parser* parser, int min_prec) {
             case TokenType_RIGHT_SHIFT:
                 type = ExpressionBinaryType_RIGHT_SHIFT;
                 break;
+            case TokenType_AND:
+                type = ExpressionBinaryType_AND;
+                break;
+            case TokenType_OR:
+                type = ExpressionBinaryType_OR;
+                break;
+            case TokenType_EQUAL:
+                type = ExpressionBinaryType_EQUAL;
+                break;
+            case TokenType_NOT_EQUAL:
+                type = ExpressionBinaryType_NOT_EQUAL;
+                break;
+            case TokenType_LESS:
+                type = ExpressionBinaryType_LESS;
+                break;
+            case TokenType_LESS_EQUAL:
+                type = ExpressionBinaryType_LESS_EQUAL;
+                break;
+            case TokenType_GREATER:
+                type = ExpressionBinaryType_GREATER;
+                break;
+            case TokenType_GREATER_EQUAL:
+                type = ExpressionBinaryType_GREATER_EQUAL;
+                break;
             default:
                 fprintf(stderr, "Unexpected token %d\n", next_token.type);
                 exit(1);
@@ -172,10 +204,14 @@ Expression parser_parse_factor(Parser* parser) {
             expression.value.integer = token.value.integer;
             break;
         case TokenType_HYPHEN:
+        case TokenType_EXCLAMATION:
         case TokenType_TILDE: {
             enum ExpressionUnaryType type =
                 token.type == TokenType_HYPHEN ?
                     ExpressionUnaryType_NEGATE :
+                token.type == TokenType_EXCLAMATION ?
+                    ExpressionUnaryType_NOT :
+                // else
                     ExpressionUnaryType_COMPLEMENT;
 
             struct ExpressionUnary unary = {

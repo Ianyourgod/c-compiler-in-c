@@ -1,3 +1,3 @@
 int main(void) {
-    return 1<<4;
+    return 29 ^ 14;
 }
