@@ -21,6 +21,15 @@ typedef struct CodegenOperand {
     CodegenOperandValue value;
 } CodegenOperand;
 
+typedef enum CodegenCondCode {
+    CodegenCondCode_EQ,
+    CodegenCondCode_NE,
+    CodegenCondCode_LT,
+    CodegenCondCode_LE,
+    CodegenCondCode_GT,
+    CodegenCondCode_GE,
+} CodegenCondCode;
+
 typedef enum CodegenInstructionType {
     CodegenInstructionType_MOV,
     CodegenInstructionType_LDI,
@@ -30,6 +39,10 @@ typedef enum CodegenInstructionType {
     CodegenInstructionType_LOD,
     CodegenInstructionType_STR,
     CodegenInstructionType_BINARY,
+    CodegenInstructionType_CMP,
+    CodegenInstructionType_JUMP,
+    CodegenInstructionType_JUMP_COND,
+    CodegenInstructionType_LABEL,
 } CodegenInstructionType;
 
 typedef enum CodegenUnaryOp {
@@ -48,6 +61,12 @@ typedef enum CodegenBinaryOp {
     CodegenBinaryOp_BITWISE_XOR,
     CodegenBinaryOp_LEFT_SHIFT,
     CodegenBinaryOp_RIGHT_SHIFT,
+    CodegenBinaryOp_EQUAL,
+    CodegenBinaryOp_NOT_EQUAL,
+    CodegenBinaryOp_LESS,
+    CodegenBinaryOp_LESS_EQUAL,
+    CodegenBinaryOp_GREATER,
+    CodegenBinaryOp_GREATER_EQUAL,
 } CodegenBinaryOp;
 
 typedef union CodegenInstructionValue {
@@ -72,6 +91,15 @@ typedef union CodegenInstructionValue {
         CodegenOperand right;
         CodegenOperand dst;
     } binary;
+    char* label;
+    struct {
+        CodegenCondCode cond;
+        char* label;
+    } jump_cond;
+    struct {
+        CodegenOperand left;
+        CodegenOperand right;
+    } cmp; // functionally the same as two_op, but semantically different
 } CodegenInstructionValue;
 
 typedef struct CodegenInstruction {

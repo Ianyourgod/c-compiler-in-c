@@ -67,10 +67,20 @@ Token lexer_next_token(Lexer* lexer) {
                 return token_new(TokenType_PERCENT, (TokenValue){0});
             case '&':
                 lexer->current++;
-                return token_new(TokenType_AMPERSAND, (TokenValue){0});
+                if (*lexer->current == '&') {
+                    lexer->current++;
+                    return token_new(TokenType_AND, (TokenValue){0});
+                } else {
+                    return token_new(TokenType_AMPERSAND, (TokenValue){0});
+                }
             case '|':
                 lexer->current++;
-                return token_new(TokenType_BITWISE_OR, (TokenValue){0});
+                if (*lexer->current == '|') {
+                    lexer->current++;
+                    return token_new(TokenType_OR, (TokenValue){0});
+                } else {
+                    return token_new(TokenType_BITWISE_OR, (TokenValue){0});
+                }
             case '^':
                 lexer->current++;
                 return token_new(TokenType_BITWISE_XOR, (TokenValue){0});
@@ -93,6 +103,24 @@ Token lexer_next_token(Lexer* lexer) {
                     // panic
                     fprintf(stderr, "Unexpected character: %c\n", *lexer->current);
                     exit(1);
+                }
+            case '=':
+                lexer->current++;
+                if (*lexer->current == '=') {
+                    lexer->current++;
+                    return token_new(TokenType_EQUAL, (TokenValue){0});
+                } else {
+                    // panic
+                    fprintf(stderr, "Unexpected character: %c\n", *lexer->current);
+                    exit(1);
+                }
+            case '!':
+                lexer->current++;
+                if (*lexer->current == '=') {
+                    lexer->current++;
+                    return token_new(TokenType_NOT_EQUAL, (TokenValue){0});
+                } else {
+                    return token_new(TokenType_EXCLAMATION, (TokenValue){0});
                 }
             default:
                 if (can_start_identifier(c)) {

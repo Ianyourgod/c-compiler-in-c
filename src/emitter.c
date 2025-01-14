@@ -86,7 +86,9 @@ char* emit_instruction(CodegenInstruction instruction) {
                     op = "not";
                     break;
                 default:
-                    return NULL;
+                    // error
+                    fprintf(stderr, "Unexpected unary operation in emit stage\n");
+                    exit(1);
             }
 
             sprintf(output, "%s %s %s\n", op, source, destination);
@@ -136,9 +138,29 @@ char* emit_instruction(CodegenInstruction instruction) {
                 case CodegenBinaryOp_RIGHT_SHIFT:
                     op = "shr";
                     break;
+                case CodegenBinaryOp_EQUAL:
+                    op = "eq";
+                    break;
+                case CodegenBinaryOp_NOT_EQUAL:
+                    op = "ne";
+                    break;
+                case CodegenBinaryOp_LESS:
+                    op = "lt";
+                    break;
+                case CodegenBinaryOp_LESS_EQUAL:
+                    op = "le";
+                    break;
+                case CodegenBinaryOp_GREATER:
+                    op = "gt";
+                    break;
+                case CodegenBinaryOp_GREATER_EQUAL:
+                    op = "ge";
+                    break;
 
                 default:
-                    return NULL;
+                    // error
+                    fprintf(stderr, "Unexpected binary operation in emit stage\n");
+                    exit(1);
             }
 
             sprintf(output, "%s %s %s %s\n", op, left, right, destination);
@@ -182,9 +204,71 @@ char* emit_instruction(CodegenInstruction instruction) {
         case CodegenInstructionType_RET: {
             return strdup("ret\n");
         }
+        case CodegenInstructionType_CMP: {
+            char* left = emit_operand(instruction.value.cmp.left);
+            char* right = emit_operand(instruction.value.cmp.right);
+
+            char* output = malloc(strlen(left) + strlen(right) + 7);
+            sprintf(output, "cmp %s %s\n", left, right);
+
+            free(left);
+            free(right);
+
+            return output;
+        }
+        case CodegenInstructionType_JUMP: {
+            char* output = malloc(6 + strlen(instruction.value.label));
+            sprintf(output, "jmp %s\n", instruction.value.label);
+
+            return output;
+        }
+        case CodegenInstructionType_JUMP_COND: {
+            char* cond;
+
+            switch (instruction.value.jump_cond.cond) {
+                case CodegenCondCode_EQ:
+                    cond = "eq";
+                    break;
+                case CodegenCondCode_NE:
+                    cond = "ne";
+                    break;
+                case CodegenCondCode_LT:
+                    cond = "lt";
+                    break;
+                case CodegenCondCode_LE:
+                    cond = "lte";
+                    break;
+                case CodegenCondCode_GT:
+                    cond = "gt";
+                    break;
+                case CodegenCondCode_GE:
+                    cond = "gte";
+                    break;
+                default:
+                    // error
+                    fprintf(stderr, "Unexpected condition code in emit stage\n");
+                    exit(1);
+            }
+
+            char* output = malloc(6 + strlen(instruction.value.jump_cond.label) + strlen(cond));
+            sprintf(output, "jc %s %s\n", cond, instruction.value.jump_cond.label);
+
+            return output;
+        }
+        case CodegenInstructionType_LABEL: {
+            char* output = malloc(3 + strlen(instruction.value.label));
+            sprintf(output, "%s:\n", instruction.value.label);
+
+            return output;
+        }
         default:
-            return NULL;
+            // error
+            fprintf(stderr, "Unexpected instruction type in emit stage\n");
+            exit(1);
     }
+
+    fprintf(stderr, "Unexpected instruction type in emit stage\n");
+    exit(1);
 }
 
 char* emit_operand(CodegenOperand operand) {
@@ -200,6 +284,8 @@ char* emit_operand(CodegenOperand operand) {
             return output;
         }
         default:
-            return NULL;
+            // error
+            fprintf(stderr, "Unexpected operand type in emit stage %d\n", operand.type);
+            exit(1);
     }
 }

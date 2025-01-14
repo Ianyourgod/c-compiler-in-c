@@ -68,6 +68,13 @@ CodegenInstruction replace_pseudo_instruction(CodegenInstruction instruction, Ps
             instruction.value.mem.address = replace_pseudo_operand(instruction.value.mem.address, map);
             instruction.value.mem.reg = replace_pseudo_operand(instruction.value.mem.reg, map);
             break;
+        case CodegenInstructionType_CMP:
+            instruction.value.cmp.left = replace_pseudo_operand(instruction.value.cmp.left, map);
+            instruction.value.cmp.right = replace_pseudo_operand(instruction.value.cmp.right, map);
+            break;
+        case CodegenInstructionType_JUMP:
+        case CodegenInstructionType_JUMP_COND:
+        case CodegenInstructionType_LABEL:
         case CodegenInstructionType_ALLOCATE_STACK:
         case CodegenInstructionType_RET:
             break;

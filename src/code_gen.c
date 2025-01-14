@@ -44,7 +44,7 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
                 .value = {
                     .two_op = {
                         .source = codegen_convert_val(instruction.value.val, instructions),
-                        .destination = {CodegenOperandType_REGISTER, .value.num = 1},
+                        .destination = {CodegenOperandType_REGISTER, .value.num = 2},
                     },
                 },
             };
@@ -62,6 +62,25 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
         case IRInstructionType_Unary: {
             CodegenOperand src = codegen_convert_val(instruction.value.unary.src, instructions);
             CodegenOperand dst = codegen_convert_val(instruction.value.unary.dst, instructions);
+
+            if (instruction.value.unary.op == IRUnaryOp_Not) {
+                // this is actually just a x == 0
+                CodegenInstruction not_instr = {
+                    .type = CodegenInstructionType_BINARY,
+                    .value = {
+                        .binary = {
+                            .op = CodegenBinaryOp_EQUAL,
+                            .left = src,
+                            .right = {CodegenOperandType_REGISTER, .value.num = 0},
+                            .dst = dst,
+                        },
+                    },
+                };
+
+                vec_push(*instructions, not_instr);
+
+                break;
+            }
 
             CodegenInstruction unary_instruction = {
                 .type = CodegenInstructionType_UNARY,
@@ -116,6 +135,24 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
                 case IRBinaryOp_RightShift:
                     op = CodegenBinaryOp_RIGHT_SHIFT;
                     break;
+                case IRBinaryOp_Equal:
+                    op = CodegenBinaryOp_EQUAL;
+                    break;
+                case IRBinaryOp_NotEqual:
+                    op = CodegenBinaryOp_NOT_EQUAL;
+                    break;
+                case IRBinaryOp_Less:
+                    op = CodegenBinaryOp_LESS;
+                    break;
+                case IRBinaryOp_LessEqual:
+                    op = CodegenBinaryOp_LESS_EQUAL;
+                    break;
+                case IRBinaryOp_Greater:
+                    op = CodegenBinaryOp_GREATER;
+                    break;
+                case IRBinaryOp_GreaterEqual:
+                    op = CodegenBinaryOp_GREATER_EQUAL;
+                    break;
 
                 default:
                     op = CodegenBinaryOp_ADD;
@@ -138,8 +175,82 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
 
             break;
         }
-        default:
+        case IRInstructionType_Copy: {
+            CodegenOperand src = codegen_convert_val(instruction.value.copy.src, instructions);
+            CodegenOperand dst = codegen_convert_val(instruction.value.copy.dst, instructions);
+
+            CodegenInstruction mov_instruction = {
+                .type = CodegenInstructionType_MOV,
+                .value = {
+                    .two_op = {
+                        .source = src,
+                        .destination = dst,
+                    },
+                },
+            };
+
+            vec_push(*instructions, mov_instruction);
+
             break;
+        }
+        case IRInstructionType_Jump: {
+            CodegenInstruction jmp_instruction = {
+                .type = CodegenInstructionType_JUMP,
+                .value = {
+                    .label = instruction.value.label,
+                },
+            };
+
+            vec_push(*instructions, jmp_instruction);
+
+            break;
+        } 
+        case IRInstructionType_JumpIfZero:
+        case IRInstructionType_JumpIfNotZero: {
+            int is_zero = instruction.type == IRInstructionType_JumpIfZero;
+
+            CodegenOperand src = codegen_convert_val(instruction.value.jump_cond.val, instructions);
+
+            CodegenInstruction cmp_instruction = {
+                .type = CodegenInstructionType_CMP,
+                .value = {
+                    .cmp = {
+                        .left = src,
+                        .right = {CodegenOperandType_REGISTER, .value.num = 0},
+                    },
+                },
+            };
+
+            vec_push(*instructions, cmp_instruction);
+
+            CodegenInstruction jc_instruction = {
+                .type = CodegenInstructionType_JUMP_COND,
+                .value = {
+                    .jump_cond = {
+                        .cond = is_zero ? CodegenCondCode_EQ : CodegenCondCode_NE,
+                        .label = instruction.value.jump_cond.label,
+                    },
+                },
+            };
+
+            vec_push(*instructions, jc_instruction);
+
+            break;
+        }
+        case IRInstructionType_Label: {
+            CodegenInstruction label_instruction = {
+                .type = CodegenInstructionType_LABEL,
+                .value = {
+                    .label = instruction.value.label,
+                },
+            };
+
+            vec_push(*instructions, label_instruction);
+
+            break;
+        }
+        //default:
+        //    break;
     }
 }
 

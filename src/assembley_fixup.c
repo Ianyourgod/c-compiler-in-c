@@ -159,24 +159,28 @@ void move_to_mem(CodegenOperand op, int offset, CodegenFunctionBody* body) {
 
         vecptr_push(body, ldi);
 
-        CodegenInstruction lod = {
-            .type = CodegenInstructionType_LOD,
+        CodegenInstruction str = {
+            .type = CodegenInstructionType_STR,
             .value = {
-                .two_op = {
-                    .source = {
+                .mem = {
+                    .address = {
                         .type = CodegenOperandType_REGISTER,
-                    },
-                    .destination = {
-                        .type = CodegenOperandType_STACK,
                         .value = {
-                            .num = offset
-                        }
-                    }
+                            .num = 15,
+                        },
+                    },
+                    .offset = offset,
+                    .reg = {
+                        .type = CodegenOperandType_REGISTER,
+                        .value = {
+                            .num = 10,
+                        },
+                    },
                 }
             }
         };
 
-        vecptr_push(body, lod);
+        vecptr_push(body, str);
     } else if (is_reg(op.type)) {
         reg_to_mem(op.value.num, offset, body);
     } else if (is_stack(op.type)) {
@@ -262,6 +266,9 @@ int move_to_reg_if_not(CodegenOperand op, int target_reg, CodegenFunctionBody* b
     if (is_reg(op.type)) {
         return op.value.num;
     } else {
+        if (is_imm(op.type) && op.value.num == 0) {
+            return 0;
+        }
         move_to_reg(op, target_reg, body);
         return target_reg;
     }
@@ -369,9 +376,46 @@ void fixup_instruction(CodegenInstruction instruction, CodegenFunctionBody* body
 
             break;
         }
+        case CodegenInstructionType_CMP: {
+            int left_reg = move_to_reg_if_not(instruction.value.cmp.left, 10, body);
+            int right_reg = move_to_reg_if_not(instruction.value.cmp.right, 11, body);
 
+            CodegenInstruction cmp = {
+                .type = CodegenInstructionType_CMP,
+                .value = {
+                    .cmp = {
+                        .left = {
+                            .type = CodegenOperandType_REGISTER,
+                            .value = {
+                                .num = left_reg,
+                            },
+                        },
+                        .right = {
+                            .type = CodegenOperandType_REGISTER,
+                            .value = {
+                                .num = right_reg,
+                            },
+                        },
+                    },
+                },
+            };
+
+            vecptr_push(body, cmp);
+            break;
+        }
+
+        case CodegenInstructionType_RET:
+        case CodegenInstructionType_LABEL:
+        case CodegenInstructionType_JUMP:
+        case CodegenInstructionType_JUMP_COND:
+        case CodegenInstructionType_ALLOCATE_STACK:
+            vecptr_push(body, instruction);
+            break;
+
+        /*
         default:
             vecptr_push(body, instruction);
             break;
+        */
     }
 }

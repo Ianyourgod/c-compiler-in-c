@@ -183,20 +183,20 @@ int main(int argc, char** argv) {
 "call main\n"
 "ldi r3 48\n"
 "ldi r4 10\n"
-"ldi r6 ...render_exit_code\n"
 "ldi r14 65534\n"
-"ldi r15 65534\n"
+"ldi r15 65532\n"
 "...render_exit_code:\n"
-"mod r1 r4 r5\n"
+"mod r2 r4 r5\n"
 "add r5 r3 r5\n"
 "push r5\n"
-"div r1 r4 r1\n"
-"jc > r1 r0 r6\n"
-"ldi r6 ...render_exit_code_1\n"
+"div r2 r4 r2\n"
+"cmp r2 r0\n"
+"jc > ...render_exit_code\n"
 "...render_exit_code_1:\n"
 "pop r5\n"
 "pout r5\n"
-"jc < r14 r15 r6 \n"
+"cmp r14 r15\n"
+"jc < ...render_exit_code_1 \n"
 "hlt\n";
 
     fprintf(output_file, "%s", adding);
@@ -229,6 +229,8 @@ int main(int argc, char** argv) {
     free(assembly_output_file);
 
     free(args.inputs);
+
+    printf("fully done\n");
 
     return 0;
 }

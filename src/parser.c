@@ -76,27 +76,31 @@ int get_precedence(TokenType type) {
         case TokenType_MUL:
         case TokenType_DIV:
         case TokenType_PERCENT:
-            return 50;
+            return 13;
         case TokenType_ADD:
         case TokenType_HYPHEN:
-            return 45;
+            return 12;
         case TokenType_LEFT_SHIFT:
         case TokenType_RIGHT_SHIFT:
-            return 40;
+            return 11;
         case TokenType_LESS:
         case TokenType_LESS_EQUAL:
         case TokenType_GREATER:
         case TokenType_GREATER_EQUAL:
-            return 35;
+            return 10;
         case TokenType_EQUAL:
         case TokenType_NOT_EQUAL:
-            return 30;
+            return 9;
         case TokenType_AMPERSAND:
-            return 25;
+            return 8;
         case TokenType_BITWISE_XOR:
-            return 24;
+            return 7;
         case TokenType_BITWISE_OR:
-            return 23;
+            return 6;
+        case TokenType_AND:
+            return 5;
+        case TokenType_OR:
+            return 4;
         default:
             return -1;
     }

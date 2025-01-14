@@ -46,6 +46,8 @@ IRUnaryOp ir_convert_op(enum ExpressionUnaryType type) {
             return IRUnaryOp_Complement;
         case ExpressionUnaryType_NEGATE:
             return IRUnaryOp_Negate;
+        case ExpressionUnaryType_NOT:
+            return IRUnaryOp_Not;
         default:
             return IRUnaryOp_Negate;
     }
