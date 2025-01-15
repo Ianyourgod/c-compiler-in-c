@@ -509,6 +509,83 @@ IRVal ir_generate_expression(IRGenerator* generator, Expression expression, IRFu
 
             return left;
         }
+        case ExpressionType_TERNARY: {
+            IRVal condition = ir_generate_expression(generator, *expression.value.ternary.condition, instructions);
+
+            char* else_label = ir_make_temp_name(generator);
+            char* end_label = ir_make_temp_name(generator);
+
+            IRVal dst = ir_make_temp(generator);
+
+            IRInstruction jump_else = {
+                .type = IRInstructionType_JumpIfZero,
+                .value = {
+                    .jump_cond = {
+                        .val = condition,
+                        .label = else_label,
+                    },
+                },
+            };
+
+            vecptr_push(instructions, jump_else);
+
+            IRVal then_expr = ir_generate_expression(generator, *expression.value.ternary.then_expr, instructions);
+
+            IRInstruction copy_then = {
+                .type = IRInstructionType_Copy,
+                .value = {
+                    .copy = {
+                        .src = then_expr,
+                        .dst = dst,
+                    },
+                },
+            };
+
+            vecptr_push(instructions, copy_then);
+
+            IRInstruction jump_end = {
+                .type = IRInstructionType_Jump,
+                .value = {
+                    .label = end_label,
+                },
+            };
+
+            vecptr_push(instructions, jump_end);
+
+            IRInstruction else_label_instruction = {
+                .type = IRInstructionType_Label,
+                .value = {
+                    .label = else_label,
+                },
+            };
+
+            vecptr_push(instructions, else_label_instruction);
+
+            IRVal else_expr = ir_generate_expression(generator, *expression.value.ternary.else_expr, instructions);
+
+            IRInstruction copy_else = {
+                .type = IRInstructionType_Copy,
+                .value = {
+                    .copy = {
+                        .src = else_expr,
+                        .dst = dst,
+                    },
+                },
+            };
+
+            vecptr_push(instructions, copy_else);
+
+            IRInstruction end_label_instruction = {
+                .type = IRInstructionType_Label,
+                .value = {
+                    .label = end_label,
+                },
+            };
+
+            vecptr_push(instructions, end_label_instruction);
+
+            return dst;
+        }
         /*default:
             return (IRVal){0};*/
     }

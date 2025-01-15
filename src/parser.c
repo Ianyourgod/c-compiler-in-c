@@ -188,6 +188,8 @@ int get_precedence(TokenType type) {
             return 5;
         case TokenType_OR:
             return 4;
+        case TokenType_QUESTION_MARK:
+            return 3;
         case TokenType_ASSIGN:
         case TokenType_ADD_ASSIGN:
         case TokenType_SUB_ASSIGN:
@@ -301,6 +303,7 @@ Expression parser_parse_expression(Parser* parser, int min_prec) {
     Expression left = parser_parse_factor(parser);
     Token next_token = parser_peek(parser);
     while (get_precedence(next_token.type) >= min_prec) {
+        printf("next_token: %d min_prec: %d\n", next_token.type, min_prec);
         if (next_token.type == TokenType_ASSIGN) {
             parser_next_token(parser);
 
@@ -322,9 +325,10 @@ Expression parser_parse_expression(Parser* parser, int min_prec) {
             next_token = parser_peek(parser);
             continue;
         }
+        printf("sigma\n");
 
         enum ExpressionBinaryType op_assign = is_op_assign(next_token.type);
-        if (op_assign >= 0) {
+        if ((int) op_assign >= 0) {
             parser_next_token(parser);
 
             Expression right = parser_parse_expression(parser, get_precedence(next_token.type));
@@ -340,6 +344,33 @@ Expression parser_parse_expression(Parser* parser, int min_prec) {
 
             *expression.value.binary.left = left;
             *expression.value.binary.right = right;
+
+            left = expression;
+
+            next_token = parser_peek(parser);
+            continue;
+        }
+
+        if (next_token.type == TokenType_QUESTION_MARK) {
+            parser_next_token(parser);
+
+            Expression then_expr = parser_parse_expression(parser, 0);
+            parser_expect(parser, TokenType_COLON);
+
+            Expression else_expr = parser_parse_expression(parser, get_precedence(next_token.type));
+
+            Expression expression = {
+                .type = ExpressionType_TERNARY,
+                .value.ternary = {
+                    .condition = malloc(sizeof(Expression)),
+                    .then_expr = malloc(sizeof(Expression)),
+                    .else_expr = malloc(sizeof(Expression)),
+                },
+            };
+
+            *expression.value.ternary.condition = left;
+            *expression.value.ternary.then_expr = then_expr;
+            *expression.value.ternary.else_expr = else_expr;
 
             left = expression;
 
@@ -595,6 +626,14 @@ void free_expression(Expression expr) {
             free(expr.value.binary.left);
             free_expression(*expr.value.binary.right);
             free(expr.value.binary.right);
+            break;
+        case ExpressionType_TERNARY:
+            free_expression(*expr.value.ternary.condition);
+            free(expr.value.ternary.condition);
+            free_expression(*expr.value.ternary.then_expr);
+            free(expr.value.ternary.then_expr);
+            free_expression(*expr.value.ternary.else_expr);
+            free(expr.value.ternary.else_expr);
             break;
         case ExpressionType_INT:
         case ExpressionType_VAR:

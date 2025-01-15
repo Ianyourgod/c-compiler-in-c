@@ -65,6 +65,7 @@ typedef enum ExpressionType {
     ExpressionType_VAR,
     ExpressionType_ASSIGN,
     ExpressionType_OP_ASSIGN,
+    ExpressionType_TERNARY,
 } ExpressionType;
 
 struct Expression;
@@ -120,6 +121,11 @@ typedef union ExpressionValue {
         struct Expression* lvalue;
         struct Expression* rvalue;
     } assign;
+    struct {
+        struct Expression* condition;
+        struct Expression* then_expr;
+        struct Expression* else_expr;
+    } ternary;
     char* identifier;
 } ExpressionValue;
 

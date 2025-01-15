@@ -172,6 +172,17 @@ Expression resolve_identifiers_expression(Expression expression, IdentifierTable
         }
         case ExpressionType_INT:
             break;
+        case ExpressionType_TERNARY: {
+            Expression condition = resolve_identifiers_expression(*expression.value.ternary.condition, table);
+            *expression.value.ternary.condition = condition;
+
+            Expression then_expr = resolve_identifiers_expression(*expression.value.ternary.then_expr, table);
+            *expression.value.ternary.then_expr = then_expr;
+
+            Expression else_expr = resolve_identifiers_expression(*expression.value.ternary.else_expr, table);
+            *expression.value.ternary.else_expr = else_expr;
+            break;
+        }
     }
 
     return expression;
