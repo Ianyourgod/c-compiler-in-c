@@ -103,12 +103,13 @@ Declaration parser_parse_declaration(Parser* parser) {
 Statement parser_parse_statement(Parser* parser) {
     Statement statement = {0};
 
-    Token token = parser_next_token(parser);
+    Token token = parser_peek(parser);
 
     switch (token.type) {
         case TokenType_KEYWORD:
             switch (token.value.keyword) {
                 case Keyword_RETURN: {
+                    parser_next_token(parser);
                     statement.type = StatementType_RETURN;
                     statement.value.expr = malloc(sizeof(Expression));
                     *statement.value.expr = parser_parse_expression(parser, 0);
@@ -117,6 +118,7 @@ Statement parser_parse_statement(Parser* parser) {
                     break;
                 }
                 case Keyword_IF: {
+                    parser_next_token(parser);
                     statement.type = StatementType_IF;
                     statement.value.if_statement.condition = malloc(sizeof(Expression));
                     parser_expect(parser, TokenType_LPAREN);
@@ -139,16 +141,18 @@ Statement parser_parse_statement(Parser* parser) {
                 }
             }
             break;
+        case TokenType_LBRACE:
+            statement.type = StatementType_BLOCK;
+            statement.value.block = malloc(sizeof(ParserBlock));
+            *statement.value.block = parser_parse_block(parser);
+            break;
         default:
-            // this is literally just the return code but with a different type and going back a token
+            // this is literally just the return code but with a different type
             statement.type = StatementType_EXPRESSION;
             statement.value.expr = malloc(sizeof(Expression));
-            // go back a token
-            parser->index--;
             *statement.value.expr = parser_parse_expression(parser, 0);
             // expect semicolon
             parser_expect(parser, TokenType_SEMICOLON);
-            printf("got past\n");
     }
 
     return statement;
