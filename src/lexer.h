@@ -44,12 +44,16 @@ typedef enum TokenType {
     TokenType_XOR_ASSIGN,
     TokenType_LEFT_SHIFT_ASSIGN,
     TokenType_RIGHT_SHIFT_ASSIGN,
+    TokenType_QUESTION_MARK,
+    TokenType_COLON,
 } TokenType;
 
 typedef enum KeywordType {
     Keyword_VOID,
     Keyword_INT,
     Keyword_RETURN,
+    Keyword_IF,
+    Keyword_ELSE,
 } KeywordType;
 
 typedef union TokenValue {

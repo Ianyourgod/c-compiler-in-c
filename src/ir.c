@@ -86,6 +86,71 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
             ir_generate_expression(generator, *statement.value.expr, instructions);
             break;
         }
+        case StatementType_IF: {
+            IRVal condition = ir_generate_expression(generator, *statement.value.if_statement.condition, instructions);
+
+            char* else_label = ir_make_temp_name(generator);
+            char* end_label = ir_make_temp_name(generator);
+
+            IRInstruction jump_else = {
+                .type = IRInstructionType_JumpIfZero,
+                .value = {
+                    .jump_cond = {
+                        .val = condition,
+                        .label = else_label,
+                    },
+                },
+            };
+
+            vecptr_push(instructions, jump_else);
+
+            ir_generate_statement(generator, *statement.value.if_statement.then_block, instructions);
+
+            if (statement.value.if_statement.else_block != NULL) {
+                IRInstruction jump_end = {
+                    .type = IRInstructionType_Jump,
+                    .value = {
+                        .label = end_label,
+                    },
+                };
+
+                vecptr_push(instructions, jump_end);
+
+                IRInstruction else_label_instruction = {
+                    .type = IRInstructionType_Label,
+                    .value = {
+                        .label = else_label,
+                    },
+                };
+
+                vecptr_push(instructions, else_label_instruction);
+
+                ir_generate_statement(generator, *statement.value.if_statement.else_block, instructions);
+
+                IRInstruction end_label_instruction = {
+                    .type = IRInstructionType_Label,
+                    .value = {
+                        .label = end_label,
+                    },
+                };
+
+                vecptr_push(instructions, end_label_instruction);
+            } else {
+                IRInstruction else_label_instruction = {
+                    .type = IRInstructionType_Label,
+                    .value = {
+                        .label = else_label,
+                    },
+                };
+
+                vecptr_push(instructions, else_label_instruction);
+            }
+            break;
+        }
+        case StatementType_BLOCK: {
+            ir_generate_block(generator, *statement.value.block, instructions);
+            break;
+        }
     }
 }
 

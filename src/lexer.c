@@ -189,6 +189,10 @@ Token lexer_next_token(Lexer* lexer) {
                         return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_VOID});
                     } else if (length == 6 && strncmp(start, "return", 6) == 0) {
                         return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_RETURN});
+                    } else if (length == 2 && strncmp(start, "if", 2) == 0) {
+                        return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_IF});
+                    } else if (length == 4 && strncmp(start, "else", 4) == 0) {
+                        return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_ELSE});
                     } else {
                         return token_new(TokenType_IDENTIFIER, (TokenValue){.identifier = strndup(start, length)});
                     }

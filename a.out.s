@@ -19,15 +19,19 @@ cmp r14 r15
 jc < ...render_exit_code_1 
 hlt
 main:
-ldi r10 3
+ldi r10 0
 str r15 r10 -4
-lod r15 r10 -4
-str r15 r10 -8
-lod r15 r10 -4
-ldi r11 1
-add r10 r11 r12
-str r15 r12 -4
-lod r15 r2 -8
+ldi r10 4
+cmp r10 r0
+jc eq .t.0
+ldi r10 1
+str r15 r10 -4
+jmp .t.1
+.t.0:
+ldi r10 2
+str r15 r10 -4
+.t.1:
+lod r15 r2 -4
 ret
 ldi r2 0
 ret

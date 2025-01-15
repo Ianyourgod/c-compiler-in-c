@@ -88,9 +88,25 @@ Statement resolve_identifiers_statement(Statement statement, IdentifierTable* ta
         case StatementType_RETURN:
         case StatementType_EXPRESSION: {
             Expression expr = resolve_identifiers_expression(*statement.value.expr, table);
-            free(statement.value.expr);
-            statement.value.expr = malloc(sizeof(Expression));
             *statement.value.expr = expr;
+            break;
+        }
+        case StatementType_IF: {
+            Expression condition = resolve_identifiers_expression(*statement.value.if_statement.condition, table);
+            *statement.value.if_statement.condition = condition;
+
+            Statement then_block = resolve_identifiers_statement(*statement.value.if_statement.then_block, table);
+            *statement.value.if_statement.then_block = then_block;
+
+            if (statement.value.if_statement.else_block != NULL) {
+                Statement else_block = resolve_identifiers_statement(*statement.value.if_statement.else_block, table);
+                *statement.value.if_statement.else_block = else_block;
+            }
+            break;
+        }
+        case StatementType_BLOCK: {
+            ParserBlock block = resolve_identifiers_block(*statement.value.block, table);
+            *statement.value.block = block;
             break;
         }
     }
@@ -106,8 +122,6 @@ Declaration resolve_identifiers_declaration(Declaration declaration, IdentifierT
 
     if (declaration.expression != NULL) {
         Expression expr = resolve_identifiers_expression(*declaration.expression, table);
-        free(declaration.expression);
-        declaration.expression = malloc(sizeof(Expression));
         *declaration.expression = expr;
     }
 
@@ -130,8 +144,6 @@ Expression resolve_identifiers_expression(Expression expression, IdentifierTable
             expression.value.assign.lvalue->value.identifier = strdup(new_name);
 
             Expression rvalue = resolve_identifiers_expression(*expression.value.assign.rvalue, table);
-            free(expression.value.assign.rvalue);
-            expression.value.assign.rvalue = malloc(sizeof(Expression));
             *expression.value.assign.rvalue = rvalue;
             break;
         }
@@ -142,27 +154,19 @@ Expression resolve_identifiers_expression(Expression expression, IdentifierTable
             expression.value.binary.left->value.identifier = strdup(new_name);
 
             Expression right = resolve_identifiers_expression(*expression.value.binary.right, table);
-            free(expression.value.binary.right);
-            expression.value.binary.right = malloc(sizeof(Expression));
             *expression.value.binary.right = right;
             break;
         }
         case ExpressionType_UNARY: {
             Expression expr = resolve_identifiers_expression(*expression.value.unary.expression, table);
-            free(expression.value.unary.expression);
-            expression.value.unary.expression = malloc(sizeof(Expression));
             *expression.value.unary.expression = expr;
             break;
         }
         case ExpressionType_BINARY: {
             Expression left = resolve_identifiers_expression(*expression.value.binary.left, table);
-            free(expression.value.binary.left);
-            expression.value.binary.left = malloc(sizeof(Expression));
             *expression.value.binary.left = left;
 
             Expression right = resolve_identifiers_expression(*expression.value.binary.right, table);
-            free(expression.value.binary.right);
-            expression.value.binary.right = malloc(sizeof(Expression));
             *expression.value.binary.right = right;
             break;
         }

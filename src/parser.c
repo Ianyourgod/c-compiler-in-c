@@ -107,15 +107,36 @@ Statement parser_parse_statement(Parser* parser) {
 
     switch (token.type) {
         case TokenType_KEYWORD:
-            if (token.value.keyword == Keyword_RETURN) {
-                statement.type = StatementType_RETURN;
-                statement.value.expr = malloc(sizeof(Expression));
-                *statement.value.expr = parser_parse_expression(parser, 0);
-                // expect semicolon
-                parser_expect(parser, TokenType_SEMICOLON);
-            } else {
-                fprintf(stderr, "Unexpected keyword %d\n", token.value.keyword);
-                exit(1);
+            switch (token.value.keyword) {
+                case Keyword_RETURN: {
+                    statement.type = StatementType_RETURN;
+                    statement.value.expr = malloc(sizeof(Expression));
+                    *statement.value.expr = parser_parse_expression(parser, 0);
+                    // expect semicolon
+                    parser_expect(parser, TokenType_SEMICOLON);
+                    break;
+                }
+                case Keyword_IF: {
+                    statement.type = StatementType_IF;
+                    statement.value.if_statement.condition = malloc(sizeof(Expression));
+                    parser_expect(parser, TokenType_LPAREN);
+                    *statement.value.if_statement.condition = parser_parse_expression(parser, 0);
+                    parser_expect(parser, TokenType_RPAREN);
+                    statement.value.if_statement.then_block = malloc(sizeof(Statement));
+                    *statement.value.if_statement.then_block = parser_parse_statement(parser);
+                    if (parser_peek(parser).type == TokenType_KEYWORD && parser_peek(parser).value.keyword == Keyword_ELSE) {
+                        parser_next_token(parser);
+                        statement.value.if_statement.else_block = malloc(sizeof(Statement));
+                        *statement.value.if_statement.else_block = parser_parse_statement(parser);
+                    } else {
+                        statement.value.if_statement.else_block = NULL;
+                    }
+                    break;
+                }
+                default: {
+                    fprintf(stderr, "Unexpected keyword %d\n", token.value.keyword);
+                    exit(1);
+                }
             }
             break;
         default:
@@ -127,6 +148,7 @@ Statement parser_parse_statement(Parser* parser) {
             *statement.value.expr = parser_parse_expression(parser, 0);
             // expect semicolon
             parser_expect(parser, TokenType_SEMICOLON);
+            printf("got past\n");
     }
 
     return statement;
@@ -532,6 +554,17 @@ void free_statement(Statement statement) {
         case StatementType_EXPRESSION:
             free_expression(*statement.value.expr);
             free(statement.value.expr);
+            break;
+        case StatementType_IF:
+            free_expression(*statement.value.if_statement.condition);
+            free(statement.value.if_statement.then_block);
+            if (statement.value.if_statement.else_block != NULL) {
+                free(statement.value.if_statement.else_block);
+            }
+            break;
+        case StatementType_BLOCK:
+            free_block(*statement.value.block);
+            free(statement.value.block);
             break;
     }
 }

@@ -28,10 +28,18 @@ typedef struct Declaration {
 typedef enum StatementType {
     StatementType_RETURN,
     StatementType_EXPRESSION,
+    StatementType_IF,
+    StatementType_BLOCK,
 } StatementType;
 
 typedef union StatementValue {
     struct Expression* expr;
+    struct {
+        struct Expression* condition;
+        struct Statement* then_block;
+        struct Statement* else_block; // optional, can be NULL
+    } if_statement;
+    struct ParserBlock* block;
 } StatementValue;
 
 typedef struct Statement {
