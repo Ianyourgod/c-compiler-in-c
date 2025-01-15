@@ -13,6 +13,7 @@ typedef enum TokenType {
     TokenType_SEMICOLON,
     TokenType_TILDE,
     TokenType_HYPHEN,
+    TokenType_INCREMENT,
     TokenType_DECREMENT,
     TokenType_ADD,
     TokenType_MUL,
@@ -32,6 +33,17 @@ typedef enum TokenType {
     TokenType_LESS_EQUAL,
     TokenType_GREATER,
     TokenType_GREATER_EQUAL,
+    TokenType_ASSIGN,
+    TokenType_ADD_ASSIGN,
+    TokenType_SUB_ASSIGN,
+    TokenType_MUL_ASSIGN,
+    TokenType_DIV_ASSIGN,
+    TokenType_MOD_ASSIGN,
+    TokenType_AND_ASSIGN,
+    TokenType_OR_ASSIGN,
+    TokenType_XOR_ASSIGN,
+    TokenType_LEFT_SHIFT_ASSIGN,
+    TokenType_RIGHT_SHIFT_ASSIGN,
 } TokenType;
 
 typedef enum KeywordType {

@@ -1,3 +1,4 @@
 int main(void) {
-    return 0 && 1 || 0;
+    int a = 3;
+    return a++;
 }

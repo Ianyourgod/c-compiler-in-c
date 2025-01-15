@@ -4,6 +4,7 @@
 
 #include "lexer.h"
 #include "parser.h"
+#include "identifier_resolution.h"
 #include "ir.h"
 #include "code_gen.h"
 #include "replace_pseudo.h"
@@ -61,6 +62,7 @@ struct Args parse_args(int argc, char** argv) {
 }
 
 char* compile(char* input) {
+    printf("pre lex\n");
     Lexer lexer = lexer_new(input);
 
     Token* tokens = malloc(sizeof(Token));
@@ -78,11 +80,16 @@ char* compile(char* input) {
         token = lexer_next_token(&lexer);
     }
 
+    printf("pre parse\n");
     Parser parser = parser_new(tokens);
     ParserProgram program = parser_parse(&parser);
 
+    printf("pre ident res\n");
+    ParserProgram ident_res_program = resolve_identifiers(program);
+
+    printf("pre ir\n");
     IRGenerator generator = ir_generator_new();
-    IRProgram ir_program = ir_generate_program(&generator, program);
+    IRProgram ir_program = ir_generate_program(&generator, ident_res_program);
 
     printf("pre codegen\n");
     CodegenProgram codegen_program = codegen_generate_program(ir_program);

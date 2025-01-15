@@ -47,62 +47,118 @@ Token lexer_next_token(Lexer* lexer) {
                 return token_new(TokenType_TILDE, (TokenValue){0});
             case '-':
                 lexer->current++;
-                if (*lexer->current == '-') {
-                    lexer->current++;
-                    return token_new(TokenType_DECREMENT, (TokenValue){0});
-                } else {
-                    return token_new(TokenType_HYPHEN, (TokenValue){0});
+                switch (*lexer->current) {
+                    case '-':
+                        lexer->current++;
+                        return token_new(TokenType_DECREMENT, (TokenValue){0});
+                    case '=':
+                        lexer->current++;
+                        return token_new(TokenType_SUB_ASSIGN, (TokenValue){0});
+                    default:
+                        return token_new(TokenType_HYPHEN, (TokenValue){0});
                 }
             case '+':
                 lexer->current++;
-                return token_new(TokenType_ADD, (TokenValue){0});
+                switch (*lexer->current) {
+                    case '+':
+                        lexer->current++;
+                        return token_new(TokenType_INCREMENT, (TokenValue){0});
+                    case '=':
+                        lexer->current++;
+                        return token_new(TokenType_ADD_ASSIGN, (TokenValue){0});
+                    default:
+                        return token_new(TokenType_ADD, (TokenValue){0});
+                }
             case '*':
                 lexer->current++;
-                return token_new(TokenType_MUL, (TokenValue){0});
+                if (*lexer->current == '=') {
+                    lexer->current++;
+                    return token_new(TokenType_MUL_ASSIGN, (TokenValue){0});
+                } else {
+                    return token_new(TokenType_MUL, (TokenValue){0});
+                }
             case '/':
                 lexer->current++;
-                return token_new(TokenType_DIV, (TokenValue){0});
+                if (*lexer->current == '=') {
+                    lexer->current++;
+                    return token_new(TokenType_DIV_ASSIGN, (TokenValue){0});
+                } else {
+                    return token_new(TokenType_DIV, (TokenValue){0});
+                }
             case '%':
                 lexer->current++;
-                return token_new(TokenType_PERCENT, (TokenValue){0});
+                if (*lexer->current == '=') {
+                    lexer->current++;
+                    return token_new(TokenType_MOD_ASSIGN, (TokenValue){0});
+                } else {
+                    return token_new(TokenType_PERCENT, (TokenValue){0});
+                }
             case '&':
                 lexer->current++;
-                if (*lexer->current == '&') {
-                    lexer->current++;
-                    return token_new(TokenType_AND, (TokenValue){0});
-                } else {
-                    return token_new(TokenType_AMPERSAND, (TokenValue){0});
+                switch (*lexer->current) {
+                    case '&':
+                        lexer->current++;
+                        return token_new(TokenType_AND, (TokenValue){0});
+                    case '=':
+                        lexer->current++;
+                        return token_new(TokenType_AND_ASSIGN, (TokenValue){0});
+                    default:
+                        return token_new(TokenType_AMPERSAND, (TokenValue){0});
                 }
             case '|':
                 lexer->current++;
-                if (*lexer->current == '|') {
-                    lexer->current++;
-                    return token_new(TokenType_OR, (TokenValue){0});
-                } else {
-                    return token_new(TokenType_BITWISE_OR, (TokenValue){0});
+                switch (*lexer->current) {
+                    case '|':
+                        lexer->current++;
+                        return token_new(TokenType_OR, (TokenValue){0});
+                    case '=':
+                        lexer->current++;
+                        return token_new(TokenType_OR_ASSIGN, (TokenValue){0});
+                    default:
+                        return token_new(TokenType_BITWISE_OR, (TokenValue){0});
                 }
             case '^':
                 lexer->current++;
-                return token_new(TokenType_BITWISE_XOR, (TokenValue){0});
+                switch (*lexer->current) {
+                    case '=':
+                        lexer->current++;
+                        return token_new(TokenType_XOR_ASSIGN, (TokenValue){0});
+                    default:
+                        return token_new(TokenType_BITWISE_XOR, (TokenValue){0});
+                }
             case '<':
                 lexer->current++;
-                if (*lexer->current == '<') {
-                    lexer->current++;
-                    return token_new(TokenType_LEFT_SHIFT, (TokenValue){0});
-                } else {
-                    // panic
-                    fprintf(stderr, "Unexpected character: %c\n", *lexer->current);
-                    exit(1);
+                switch (*lexer->current) {
+                    case '<':
+                        lexer->current++;
+                        if (*lexer->current == '=') {
+                            lexer->current++;
+                            return token_new(TokenType_LEFT_SHIFT_ASSIGN, (TokenValue){0});
+                        } else {
+                            return token_new(TokenType_LEFT_SHIFT, (TokenValue){0});
+                        }
+                    case '=':
+                        lexer->current++;
+                        return token_new(TokenType_LESS_EQUAL, (TokenValue){0});
+                    default:
+                        return token_new(TokenType_LESS, (TokenValue){0});
                 }
             case '>':
                 lexer->current++;
-                if (*lexer->current == '>') {
-                    lexer->current++;
-                    return token_new(TokenType_RIGHT_SHIFT, (TokenValue){0});
-                } else {
-                    // panic
-                    fprintf(stderr, "Unexpected character: %c\n", *lexer->current);
-                    exit(1);
+                switch (*lexer->current) {
+                    case '>':
+                        lexer->current++;
+                        if (*lexer->current == '=') {
+                            lexer->current++;
+                            return token_new(TokenType_RIGHT_SHIFT_ASSIGN, (TokenValue){0});
+                        } else {
+                            return token_new(TokenType_RIGHT_SHIFT, (TokenValue){0});
+                        }
+                    case '=':
+                        lexer->current++;
+                        return token_new(TokenType_GREATER_EQUAL, (TokenValue){0});
+                    default:
+                        return token_new(TokenType_GREATER, (TokenValue){0});
                 }
             case '=':
                 lexer->current++;
@@ -110,9 +166,7 @@ Token lexer_next_token(Lexer* lexer) {
                     lexer->current++;
                     return token_new(TokenType_EQUAL, (TokenValue){0});
                 } else {
-                    // panic
-                    fprintf(stderr, "Unexpected character: %c\n", *lexer->current);
-                    exit(1);
+                    return token_new(TokenType_ASSIGN, (TokenValue){0});
                 }
             case '!':
                 lexer->current++;

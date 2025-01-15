@@ -103,10 +103,12 @@ typedef struct IRGenerator {
 IRGenerator ir_generator_new();
 IRProgram ir_generate_program(IRGenerator* generator, ParserProgram program);
 IRFunctionDefinition ir_generate_function(IRGenerator* generator, ParserFunctionDefinition function);
+void ir_generate_block(IRGenerator* generator, ParserBlock block, IRFunctionBody* instructions);
+void ir_generate_declaration(IRGenerator* generator, Declaration declaration, IRFunctionBody* instructions);
 void ir_generate_statement(IRGenerator* generator, Statement statement, IRFunctionBody* instructions);
 IRVal ir_generate_expression(IRGenerator* generator, Expression expression, IRFunctionBody* instructions);
 char* ir_make_temp_name(IRGenerator* generator);
 IRVal ir_make_temp(IRGenerator* generator);
-IRUnaryOp ir_convert_op(enum ExpressionUnaryType type);
+IRUnaryOp ir_convert_unary_op(enum ExpressionUnaryType type);
 
 #endif

@@ -20,14 +20,59 @@ IRFunctionDefinition ir_generate_function(IRGenerator* generator, ParserFunction
     IRFunctionDefinition ir_function = {0};
     ir_function.identifier = function.identifier;
     ir_function.body = (IRFunctionBody) { NULL, 0, 0 };
-    ir_generate_statement(generator, *function.body, &ir_function.body);
+
+    ir_generate_block(generator, function.body, &ir_function.body);
+
+    IRInstruction final_return = {
+        .type = IRInstructionType_Return,
+        .value = {
+            .val = (IRVal){.type = IRValType_Int, .value = {0}},
+        },
+    };
+
+    vec_push(ir_function.body, final_return);
+
     return ir_function;
+}
+
+void ir_generate_block(IRGenerator* generator, ParserBlock block, IRFunctionBody* instructions) {
+    for (int i = 0; i < block.length; i++) {
+        BlockItem item = block.statements[i];
+        switch (item.type) {
+            case BlockItem_DECLARATION:
+                ir_generate_declaration(generator, item.value.declaration, instructions);
+                break;
+            case BlockItem_STATEMENT:
+                ir_generate_statement(generator, item.value.statement, instructions);
+                break;
+        }
+    }
+}
+
+void ir_generate_declaration(IRGenerator* generator, Declaration declaration, IRFunctionBody* instructions) {
+    if (declaration.expression == NULL) {
+        return;
+    }
+
+    IRVal val = ir_generate_expression(generator, *declaration.expression, instructions);
+
+    IRInstruction instruction = {
+        .type = IRInstructionType_Copy,
+        .value = {
+            .copy = {
+                .src = val,
+                .dst = (IRVal){.type = IRValType_Var, .value = {.var = declaration.identifier}},
+            },
+        },
+    };
+
+    vecptr_push(instructions, instruction);
 }
 
 void ir_generate_statement(IRGenerator* generator, Statement statement, IRFunctionBody* instructions) {
     switch (statement.type) {
         case StatementType_RETURN: {
-            IRVal val = ir_generate_expression(generator, *statement.value.return_statement, instructions);
+            IRVal val = ir_generate_expression(generator, *statement.value.expr, instructions);
             IRInstruction instruction = {
                 .type = IRInstructionType_Return,
                 .value = {
@@ -37,10 +82,14 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
             vec_push(*instructions, instruction);
             break;
         }
+        case StatementType_EXPRESSION: {
+            ir_generate_expression(generator, *statement.value.expr, instructions);
+            break;
+        }
     }
 }
 
-IRUnaryOp ir_convert_op(enum ExpressionUnaryType type) {
+IRUnaryOp ir_convert_unary_op(enum ExpressionUnaryType type) {
     switch (type) {
         case ExpressionUnaryType_COMPLEMENT:
             return IRUnaryOp_Complement;
@@ -50,6 +99,45 @@ IRUnaryOp ir_convert_op(enum ExpressionUnaryType type) {
             return IRUnaryOp_Not;
         default:
             return IRUnaryOp_Negate;
+    }
+}
+
+IRBinaryOp ir_convert_binop(enum ExpressionBinaryType type) {
+    switch (type) {
+        case ExpressionBinaryType_ADD:
+            return IRBinaryOp_Add;
+        case ExpressionBinaryType_SUBTRACT:
+            return IRBinaryOp_Subtract;
+        case ExpressionBinaryType_MULTIPLY:
+            return IRBinaryOp_Multiply;
+        case ExpressionBinaryType_DIVIDE:
+            return IRBinaryOp_Divide;
+        case ExpressionBinaryType_MOD:
+            return IRBinaryOp_Mod;
+        case ExpressionBinaryType_BITWISE_AND:
+            return IRBinaryOp_BitwiseAnd;
+        case ExpressionBinaryType_BITWISE_OR:
+            return IRBinaryOp_BitwiseOr;
+        case ExpressionBinaryType_BITWISE_XOR:
+            return IRBinaryOp_BitwiseXor;
+        case ExpressionBinaryType_LEFT_SHIFT:
+            return IRBinaryOp_LeftShift;
+        case ExpressionBinaryType_RIGHT_SHIFT:
+            return IRBinaryOp_RightShift;
+        case ExpressionBinaryType_EQUAL:
+            return IRBinaryOp_Equal;
+        case ExpressionBinaryType_NOT_EQUAL:
+            return IRBinaryOp_NotEqual;
+        case ExpressionBinaryType_LESS:
+            return IRBinaryOp_Less;
+        case ExpressionBinaryType_LESS_EQUAL:
+            return IRBinaryOp_LessEqual;
+        case ExpressionBinaryType_GREATER:
+            return IRBinaryOp_Greater;
+        case ExpressionBinaryType_GREATER_EQUAL:
+            return IRBinaryOp_GreaterEqual;
+        default:
+            return IRBinaryOp_Add;
     }
 }
 
@@ -68,7 +156,93 @@ IRVal ir_generate_expression(IRGenerator* generator, Expression expression, IRFu
             IRVal src = ir_generate_expression(generator, *expression.value.unary.expression, instructions);
             IRVal dst = ir_make_temp(generator);
 
-            IRUnaryOp op = ir_convert_op(expression.value.unary.type);
+            if (expression.value.unary.type == ExpressionUnaryType_POST_DECREMENT ||
+                expression.value.unary.type == ExpressionUnaryType_POST_INCREMENT) {
+
+                // move src to dst
+                IRInstruction copy = {
+                    .type = IRInstructionType_Copy,
+                    .value = {
+                        .copy = {
+                            .src = src,
+                            .dst = dst,
+                        },
+                    },
+                };
+
+                vecptr_push(instructions, copy);
+
+                // generate the operation
+                IRBinaryOp op = expression.value.unary.type == ExpressionUnaryType_POST_INCREMENT ? IRBinaryOp_Add : IRBinaryOp_Subtract;
+
+                IRVal one = {
+                    .type = IRValType_Int,
+                    .value = {
+                        .integer = 1,
+                    },
+                };
+
+                IRInstruction operation = {
+                    .type = IRInstructionType_Binary,
+                    .value = {
+                        .binary = {
+                            .op = op,
+                            .left = src,
+                            .right = one,
+                            .dst = src,
+                        },
+                    },
+                };
+
+                vecptr_push(instructions, operation);
+
+                return dst;
+            }
+
+            if (expression.value.unary.type == ExpressionUnaryType_PRE_DECREMENT ||
+                expression.value.unary.type == ExpressionUnaryType_PRE_INCREMENT) {
+
+                // generate the operation
+                IRBinaryOp op = expression.value.unary.type == ExpressionUnaryType_PRE_INCREMENT ? IRBinaryOp_Add : IRBinaryOp_Subtract;
+
+                IRVal one = {
+                    .type = IRValType_Int,
+                    .value = {
+                        .integer = 1,
+                    },
+                };
+
+                IRInstruction operation = {
+                    .type = IRInstructionType_Binary,
+                    .value = {
+                        .binary = {
+                            .op = op,
+                            .left = src,
+                            .right = one,
+                            .dst = src,
+                        },
+                    },
+                };
+
+                vecptr_push(instructions, operation);
+
+                // move src to dst
+                IRInstruction copy = {
+                    .type = IRInstructionType_Copy,
+                    .value = {
+                        .copy = {
+                            .src = src,
+                            .dst = dst,
+                        },
+                    },
+                };
+
+                vecptr_push(instructions, copy);
+
+                return dst;
+            }
+
+            IRUnaryOp op = ir_convert_unary_op(expression.value.unary.type);
 
             IRInstruction instruction = {
                 .type = IRInstructionType_Unary,
@@ -179,59 +353,7 @@ IRVal ir_generate_expression(IRGenerator* generator, Expression expression, IRFu
             IRVal right = ir_generate_expression(generator, *expression.value.binary.right, instructions);
             IRVal dst = ir_make_temp(generator);
 
-            IRBinaryOp op;
-            switch (expression.value.binary.type) {
-                case ExpressionBinaryType_ADD:
-                    op = IRBinaryOp_Add;
-                    break;
-                case ExpressionBinaryType_SUBTRACT:
-                    op = IRBinaryOp_Subtract;
-                    break;
-                case ExpressionBinaryType_MULTIPLY:
-                    op = IRBinaryOp_Multiply;
-                    break;
-                case ExpressionBinaryType_DIVIDE:
-                    op = IRBinaryOp_Divide;
-                    break;
-                case ExpressionBinaryType_MOD:
-                    op = IRBinaryOp_Mod;
-                    break;
-                case ExpressionBinaryType_BITWISE_AND:
-                    op = IRBinaryOp_BitwiseAnd;
-                    break;
-                case ExpressionBinaryType_BITWISE_OR:
-                    op = IRBinaryOp_BitwiseOr;
-                    break;
-                case ExpressionBinaryType_BITWISE_XOR:
-                    op = IRBinaryOp_BitwiseXor;
-                    break;
-                case ExpressionBinaryType_LEFT_SHIFT:
-                    op = IRBinaryOp_LeftShift;
-                    break;
-                case ExpressionBinaryType_RIGHT_SHIFT:
-                    op = IRBinaryOp_RightShift;
-                    break;
-                case ExpressionBinaryType_EQUAL:
-                    op = IRBinaryOp_Equal;
-                    break;
-                case ExpressionBinaryType_NOT_EQUAL:
-                    op = IRBinaryOp_NotEqual;
-                    break;
-                case ExpressionBinaryType_LESS:
-                    op = IRBinaryOp_Less;
-                    break;
-                case ExpressionBinaryType_LESS_EQUAL:
-                    op = IRBinaryOp_LessEqual;
-                    break;
-                case ExpressionBinaryType_GREATER:
-                    op = IRBinaryOp_Greater;
-                    break;
-                case ExpressionBinaryType_GREATER_EQUAL:
-                    op = IRBinaryOp_GreaterEqual;
-                    break;
-                default:
-                    return (IRVal){0};
-            }
+            IRBinaryOp op = ir_convert_binop(expression.value.binary.type);
 
             IRInstruction instruction = {
                 .type = IRInstructionType_Binary,
@@ -249,9 +371,84 @@ IRVal ir_generate_expression(IRGenerator* generator, Expression expression, IRFu
 
             return dst;
         }
-        default:
-            return (IRVal){0};
+        case ExpressionType_VAR: {
+            IRVal val = {
+                .type = IRValType_Var,
+                .value = {
+                    .var = expression.value.identifier,
+                },
+            };
+            return val;
+        }
+        case ExpressionType_ASSIGN: {
+            IRVal right = ir_generate_expression(generator, *expression.value.assign.rvalue, instructions);
+
+            // validate lvalue & get name
+            char* name;
+            switch (expression.value.assign.lvalue->type) {
+                case ExpressionType_VAR:
+                    name = expression.value.assign.lvalue->value.identifier;
+                    break;
+                default:
+                    return (IRVal){0};
+            }
+
+            IRInstruction instruction = {
+                .type = IRInstructionType_Copy,
+                .value = {
+                    .copy = {
+                        .src = right,
+                        .dst = (IRVal){.type = IRValType_Var, .value = {.var = name}},
+                    },
+                },
+            };
+
+            vecptr_push(instructions, instruction);
+
+            return right;
+        }
+        case ExpressionType_OP_ASSIGN: {
+            IRVal right = ir_generate_expression(generator, *expression.value.binary.right, instructions);
+
+            char* name;
+            switch (expression.value.binary.left->type) {
+                case ExpressionType_VAR:
+                    name = expression.value.binary.left->value.identifier;
+                    break;
+                default:
+                    return (IRVal){0};
+            }
+
+            IRVal left = {
+                .type = IRValType_Var,
+                .value = {
+                    .var = name,
+                },
+            };
+
+            IRBinaryOp op = ir_convert_binop(expression.value.binary.type);
+
+            IRInstruction instruction = {
+                .type = IRInstructionType_Binary,
+                .value = {
+                    .binary = {
+                        .op = op,
+                        .left = left,
+                        .right = right,
+                        .dst = left,
+                    },
+                },
+            };
+
+            vecptr_push(instructions, instruction);
+
+            return left;
+        }
+        /*default:
+            return (IRVal){0};*/
     }
+
+    return (IRVal){0};
 }
 
 char* ir_make_temp_name(IRGenerator* generator) {
