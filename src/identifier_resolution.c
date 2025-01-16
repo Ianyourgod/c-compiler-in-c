@@ -8,13 +8,34 @@
 IdentifierTable identifier_table_new() {
     return (IdentifierTable){NULL, 0, 0};
 }
-void identifier_table_insert(IdentifierTable* table, char* old_name, char* new_name) {
+
+int identifier_table_get_id(IdentifierTable* table, char* old_name) {
+    for (int i = 0; i < table->length; i++) {
+        IdentifierTableEntry entry = table->entries[i];
+
+        if (!strcmp(entry.old_name, old_name)) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+void identifier_table_insert(IdentifierTable* table, char* old_name, char* new_name, int from_current) {
+    int resvd = identifier_table_get_id(table, old_name);
+
+    if (resvd >= 0) {
+        table->entries[resvd].new_name = new_name;
+        table->entries[resvd].from_current_scope = from_current;
+        return;
+    }
+
     if (table->length == table->capacity) {
         table->capacity = table->capacity == 0 ? 1 : table->capacity * 2;
         table->entries = realloc(table->entries, sizeof(*table->entries) * table->capacity);
     }
 
-    table->entries[table->length++] = (IdentifierTableEntry){old_name, new_name};
+    table->entries[table->length++] = (IdentifierTableEntry){old_name, new_name, from_current};
 }
 
 char* identifier_table_resolve(IdentifierTable* table, char* old_name) {
@@ -31,6 +52,18 @@ char* identifier_table_resolve(IdentifierTable* table, char* old_name) {
     exit(1);
 }
 
+int identifier_table_can_redefine(IdentifierTable* table, char* old_name) {
+    for (int i = 0; i < table->length; i++) {
+        IdentifierTableEntry entry = table->entries[i];
+
+        if (!strcmp(entry.old_name, old_name)) {
+            return !entry.from_current_scope;
+        }
+    }
+
+    return 1;
+}
+
 char* identifier_table_resolve_newname(IdentifierTable* table, char* new_name) {
     for (int i = 0; i < table->length; i++) {
         IdentifierTableEntry entry = table->entries[i];
@@ -43,6 +76,17 @@ char* identifier_table_resolve_newname(IdentifierTable* table, char* new_name) {
     // error
     fprintf(stderr, "Could not resolve new name: %s\n", new_name);
     exit(1);
+}
+
+IdentifierTable ident_table_clone(IdentifierTable* table) {
+    IdentifierTable new_table = {NULL, 0, 0};
+
+    for (int i = 0; i < table->length; i++) {
+        IdentifierTableEntry entry = table->entries[i];
+        identifier_table_insert(&new_table, entry.old_name, entry.new_name, 0);
+    }
+
+    return new_table;
 }
 
 void identifier_table_free(IdentifierTable table) {
@@ -104,11 +148,50 @@ Statement resolve_identifiers_statement(Statement statement, IdentifierTable* ta
             }
             break;
         }
+        case StatementType_WHILE:
+        case StatementType_DO_WHILE: {
+            Expression condition = resolve_identifiers_expression(*statement.value.loop_statement.condition, table);
+            *statement.value.loop_statement.condition = condition;
+
+            Statement body = resolve_identifiers_statement(*statement.value.loop_statement.body, table);
+            *statement.value.loop_statement.body = body;
+            break;
+        }
+        case StatementType_FOR: {
+            IdentifierTable new_table = ident_table_clone(table);
+            if (statement.value.for_statement.init.type == ForInit_DECLARATION) {
+                statement.value.for_statement.init.value.declaration = resolve_identifiers_declaration(statement.value.for_statement.init.value.declaration, &new_table);
+            } else if (statement.value.for_statement.init.value.expression != NULL) {
+                Expression expr = resolve_identifiers_expression(*statement.value.for_statement.init.value.expression, &new_table);
+                *statement.value.for_statement.init.value.expression = expr;
+            }
+
+            
+            if (statement.value.for_statement.condition != NULL) {
+                Expression condition = resolve_identifiers_expression(*statement.value.for_statement.condition, &new_table);
+                
+                *statement.value.for_statement.condition = condition;
+            }
+
+            if (statement.value.for_statement.post != NULL) {
+                Expression post = resolve_identifiers_expression(*statement.value.for_statement.post, &new_table);
+                *statement.value.for_statement.post = post;
+            }
+
+            Statement body = resolve_identifiers_statement(*statement.value.for_statement.body, &new_table);
+            *statement.value.for_statement.body = body;
+            break;
+        }
         case StatementType_BLOCK: {
-            ParserBlock block = resolve_identifiers_block(*statement.value.block, table);
+            IdentifierTable new_table = ident_table_clone(table);
+            ParserBlock block = resolve_identifiers_block(*statement.value.block, &new_table);
             *statement.value.block = block;
             break;
         }
+
+        case StatementType_BREAK:
+        case StatementType_CONTINUE:
+            break;
     }
 
     return statement;
@@ -117,7 +200,11 @@ Statement resolve_identifiers_statement(Statement statement, IdentifierTable* ta
 Declaration resolve_identifiers_declaration(Declaration declaration, IdentifierTable* table) {
     char* old_name = declaration.identifier;
     char* new_name = idents_mangle_name(declaration.identifier, table->length);
-    identifier_table_insert(table, old_name, new_name);
+    if (!identifier_table_can_redefine(table, old_name)) {
+        fprintf(stderr, "Cannot redefine variable %s\n", old_name);
+        exit(1);
+    }
+    identifier_table_insert(table, old_name, new_name, 1);
     declaration.identifier = new_name;
 
     if (declaration.expression != NULL) {
@@ -133,14 +220,13 @@ Expression resolve_identifiers_expression(Expression expression, IdentifierTable
         case ExpressionType_VAR: {
             char* old_name = expression.value.identifier;
             char* new_name = identifier_table_resolve(table, old_name);
-            free(expression.value.identifier);
+            //free(expression.value.identifier);
             expression.value.identifier = strdup(new_name);
             break;
         }
         case ExpressionType_ASSIGN: {
             char* old_name = expression.value.assign.lvalue->value.identifier;
             char* new_name = identifier_table_resolve(table, old_name);
-            identifier_table_insert(table, old_name, new_name);
             expression.value.assign.lvalue->value.identifier = strdup(new_name);
 
             Expression rvalue = resolve_identifiers_expression(*expression.value.assign.rvalue, table);
@@ -150,7 +236,6 @@ Expression resolve_identifiers_expression(Expression expression, IdentifierTable
         case ExpressionType_OP_ASSIGN: {
             char* old_name = expression.value.binary.left->value.identifier;
             char* new_name = identifier_table_resolve(table, old_name);
-            identifier_table_insert(table, old_name, new_name);
             expression.value.binary.left->value.identifier = strdup(new_name);
 
             Expression right = resolve_identifiers_expression(*expression.value.binary.right, table);

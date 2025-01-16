@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include "asprintf.h"
 
 #include "parser.h"
 #include "ir.h"
@@ -149,6 +151,254 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
         }
         case StatementType_BLOCK: {
             ir_generate_block(generator, *statement.value.block, instructions);
+            break;
+        }
+        case StatementType_WHILE: {
+            char* continue_label;
+            if (0>asprintf(&continue_label, ".%d.loop.continue", statement.value.loop_statement.label)) {
+                fprintf(stderr, "Error creating continue label\n");
+                exit(1);
+            }
+
+            char* break_label;
+            if (0>asprintf(&break_label, ".%d.loop.break", statement.value.loop_statement.label)) {
+                fprintf(stderr, "Error creating break label\n");
+                exit(1);
+            }
+
+            IRInstruction continue_label_instruction = {
+                .type = IRInstructionType_Label,
+                .value = {
+                    .label = continue_label,
+                },
+            };
+
+            vecptr_push(instructions, continue_label_instruction);
+
+            IRVal condition = ir_generate_expression(generator, *statement.value.loop_statement.condition, instructions);
+
+            IRInstruction jump_break = {
+                .type = IRInstructionType_JumpIfZero,
+                .value = {
+                    .jump_cond = {
+                        .val = condition,
+                        .label = break_label,
+                    },
+                },
+            };
+
+            vecptr_push(instructions, jump_break);
+
+            ir_generate_statement(generator, *statement.value.loop_statement.body, instructions);
+
+            IRInstruction jump_continue = {
+                .type = IRInstructionType_Jump,
+                .value = {
+                    .label = continue_label,
+                },
+            };
+
+            vecptr_push(instructions, jump_continue);
+
+            IRInstruction break_label_instruction = {
+                .type = IRInstructionType_Label,
+                .value = {
+                    .label = break_label,
+                },
+            };
+
+            vecptr_push(instructions, break_label_instruction);
+
+            break;
+        }
+        case StatementType_DO_WHILE: {
+            char* top_label;
+            if (0>asprintf(&top_label, ".%d.loop.top", statement.value.loop_statement.label)) {
+                fprintf(stderr, "Error creating top label\n");
+                exit(1);
+            }
+
+            char* continue_label;
+            if (0>asprintf(&continue_label, ".%d.loop.continue", statement.value.loop_statement.label)) {
+                fprintf(stderr, "Error creating continue label\n");
+                exit(1);
+            }
+
+            char* break_label;
+            if (0>asprintf(&break_label, ".%d.loop.break", statement.value.loop_statement.label)) {
+                fprintf(stderr, "Error creating break label\n");
+                exit(1);
+            }
+
+            IRInstruction top_label_instruction = {
+                .type = IRInstructionType_Label,
+                .value = {
+                    .label = top_label,
+                },
+            };
+
+            vecptr_push(instructions, top_label_instruction);
+
+            ir_generate_statement(generator, *statement.value.loop_statement.body, instructions);
+
+            IRInstruction continue_label_instruction = {
+                .type = IRInstructionType_Label,
+                .value = {
+                    .label = continue_label,
+                },
+            };
+
+            vecptr_push(instructions, continue_label_instruction);
+
+            IRVal condition = ir_generate_expression(generator, *statement.value.loop_statement.condition, instructions);
+
+            IRInstruction jump_top = {
+                .type = IRInstructionType_JumpIfNotZero,
+                .value = {
+                    .jump_cond = {
+                        .val = condition,
+                        .label = top_label,
+                    },
+                },
+            };
+
+            vecptr_push(instructions, jump_top);
+
+            IRInstruction break_label_instruction = {
+                .type = IRInstructionType_Label,
+                .value = {
+                    .label = break_label,
+                },
+            };
+
+            vecptr_push(instructions, break_label_instruction);
+
+            break;
+        }
+        case StatementType_CONTINUE: {
+            char* continue_label;
+            if (0>asprintf(&continue_label, ".%d.loop.continue", statement.value.loop_label)) {
+                fprintf(stderr, "Error creating continue label\n");
+                exit(1);
+            }
+
+            IRInstruction jump_continue = {
+                .type = IRInstructionType_Jump,
+                .value = {
+                    .label = continue_label,
+                },
+            };
+
+            vecptr_push(instructions, jump_continue);
+
+            break;
+        }
+        case StatementType_BREAK: {
+            char* break_label;
+            if (0>asprintf(&break_label, ".%d.loop.break", statement.value.loop_label)) {
+                fprintf(stderr, "Error creating break label\n");
+                exit(1);
+            }
+
+            IRInstruction jump_break = {
+                .type = IRInstructionType_Jump,
+                .value = {
+                    .label = break_label,
+                },
+            };
+
+            vecptr_push(instructions, jump_break);
+
+            break;
+        }
+        case StatementType_FOR: {
+            switch (statement.value.for_statement.init.type) {
+                case ForInit_DECLARATION:
+                    ir_generate_declaration(generator, statement.value.for_statement.init.value.declaration, instructions);
+                    break;
+                case ForInit_EXPRESSION:
+                    if (statement.value.for_statement.init.value.expression != NULL) {
+                        ir_generate_expression(generator, *statement.value.for_statement.init.value.expression, instructions);
+                    }
+                    break;
+            }
+
+            char* continue_label;
+            if (0>asprintf(&continue_label, ".%d.loop.continue", statement.value.for_statement.label)) {
+                fprintf(stderr, "Error creating continue label\n");
+                exit(1);
+            }
+
+            char* start_label;
+            if (0>asprintf(&start_label, ".%d.loop.start", statement.value.for_statement.label)) {
+                fprintf(stderr, "Error creating start label\n");
+                exit(1);
+            }
+
+            char* break_label;
+            if (0>asprintf(&break_label, ".%d.loop.break", statement.value.for_statement.label)) {
+                fprintf(stderr, "Error creating break label\n");
+                exit(1);
+            }
+
+            IRInstruction start_label_instruction = {
+                .type = IRInstructionType_Label,
+                .value = {
+                    .label = start_label,
+                },
+            };
+
+            vecptr_push(instructions, start_label_instruction);
+
+            if (statement.value.for_statement.condition != NULL) {
+                IRVal condition = ir_generate_expression(generator, *statement.value.for_statement.condition, instructions);
+
+                IRInstruction jump_break = {
+                    .type = IRInstructionType_JumpIfZero,
+                    .value = {
+                        .jump_cond = {
+                            .val = condition,
+                            .label = break_label,
+                        },
+                    },
+                };
+
+                vecptr_push(instructions, jump_break);
+            }
+
+            ir_generate_statement(generator, *statement.value.for_statement.body, instructions);
+
+            IRInstruction continue_label_instruction = {
+                .type = IRInstructionType_Label,
+                .value = {
+                    .label = continue_label,
+                },
+            };
+
+            vecptr_push(instructions, continue_label_instruction);
+
+            if (statement.value.for_statement.post != NULL) {
+                ir_generate_expression(generator, *statement.value.for_statement.post, instructions);
+            }
+
+            IRInstruction jump_start = {
+                .type = IRInstructionType_Jump,
+                .value = {
+                    .label = start_label,
+                },
+            };
+
+            vecptr_push(instructions, jump_start);
+
+            IRInstruction break_label_instruction = {
+                .type = IRInstructionType_Label,
+                .value = {
+                    .label = break_label,
+                },
+            };
+
+            vecptr_push(instructions, break_label_instruction);
+
             break;
         }
     }

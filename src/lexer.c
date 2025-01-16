@@ -199,6 +199,16 @@ Token lexer_next_token(Lexer* lexer) {
                         return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_IF});
                     } else if (length == 4 && strncmp(start, "else", 4) == 0) {
                         return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_ELSE});
+                    } else if (length == 5 && strncmp(start, "while", 5) == 0) {
+                        return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_WHILE});
+                    } else if (length == 3 && strncmp(start, "for", 3) == 0) {
+                        return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_FOR});
+                    } else if (length == 2 && strncmp(start, "do", 2) == 0) {
+                        return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_DO});
+                    } else if (length == 5 && strncmp(start, "break", 5) == 0) {
+                        return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_BREAK});
+                    } else if (length == 8 && strncmp(start, "continue", 8) == 0) {
+                        return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_CONTINUE});
                     } else {
                         return token_new(TokenType_IDENTIFIER, (TokenValue){.identifier = strndup(start, length)});
                     }

@@ -30,7 +30,23 @@ typedef enum StatementType {
     StatementType_EXPRESSION,
     StatementType_IF,
     StatementType_BLOCK,
+    StatementType_WHILE,
+    StatementType_FOR,
+    StatementType_DO_WHILE,
+    StatementType_BREAK,
+    StatementType_CONTINUE,
 } StatementType;
+
+struct ForInit {
+    enum {
+        ForInit_DECLARATION,
+        ForInit_EXPRESSION,
+    } type;
+    union {
+        struct Declaration declaration;
+        struct Expression* expression; // can be NULL
+    } value;
+};
 
 typedef union StatementValue {
     struct Expression* expr;
@@ -39,7 +55,20 @@ typedef union StatementValue {
         struct Statement* then_block;
         struct Statement* else_block; // optional, can be NULL
     } if_statement;
+    struct {
+        struct Expression* condition;
+        struct Statement* body;
+        int label;
+    } loop_statement;
+    struct {
+        struct ForInit init;
+        struct Expression* condition; // can be NULL
+        struct Expression* post; // can be NULL
+        struct Statement* body;
+        int label;
+    } for_statement;
     struct ParserBlock* block;
+    int loop_label;
 } StatementValue;
 
 typedef struct Statement {

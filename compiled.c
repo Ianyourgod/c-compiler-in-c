@@ -1,4 +1,8 @@
 int main(void) {
-    int a = 1;
-    return a ? 78 : 43;
+    int a = 88;
+    int b = 2;
+    for (int a = 0;a<5;a++) {
+        b *= 2;
+    }
+    return b;
 }

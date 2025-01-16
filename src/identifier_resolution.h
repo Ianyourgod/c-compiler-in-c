@@ -6,6 +6,7 @@
 typedef struct IdentifierTableEntry {
     char* old_name;
     char* new_name;
+    int from_current_scope;
 } IdentifierTableEntry;
 
 typedef struct IdentifierTable {
@@ -15,7 +16,7 @@ typedef struct IdentifierTable {
 } IdentifierTable;
 
 IdentifierTable identifier_table_new();
-void identifier_table_insert(IdentifierTable* table, char* old_name, char* new_name);
+void identifier_table_insert(IdentifierTable* table, char* old_name, char* new_name, int from_cur);
 char* identifier_table_resolve(IdentifierTable* table, char* old_name);
 char* identifier_table_resolve_newname(IdentifierTable* table, char* new_name);
 void identifier_table_free(IdentifierTable table);

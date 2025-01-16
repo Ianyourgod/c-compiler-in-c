@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "identifier_resolution.h"
+#include "loop_labeling.h"
 #include "ir.h"
 #include "code_gen.h"
 #include "replace_pseudo.h"
@@ -87,9 +88,12 @@ char* compile(char* input) {
     printf("pre ident res\n");
     ParserProgram ident_res_program = resolve_identifiers(program);
 
+    printf("pre loop label\n");
+    ParserProgram loop_label_program = label_loops(ident_res_program);
+
     printf("pre ir\n");
     IRGenerator generator = ir_generator_new();
-    IRProgram ir_program = ir_generate_program(&generator, ident_res_program);
+    IRProgram ir_program = ir_generate_program(&generator, loop_label_program);
 
     printf("pre codegen\n");
     CodegenProgram codegen_program = codegen_generate_program(ir_program);

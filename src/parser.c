@@ -135,6 +135,66 @@ Statement parser_parse_statement(Parser* parser) {
                     }
                     break;
                 }
+                case Keyword_WHILE: {
+                    parser_next_token(parser);
+                    statement.type = StatementType_WHILE;
+                    statement.value.loop_statement.condition = malloc(sizeof(Expression));
+                    parser_expect(parser, TokenType_LPAREN);
+                    *statement.value.loop_statement.condition = parser_parse_expression(parser, 0);
+                    parser_expect(parser, TokenType_RPAREN);
+                    statement.value.loop_statement.body = malloc(sizeof(Statement));
+                    *statement.value.loop_statement.body = parser_parse_statement(parser);
+                    break;
+                }
+                case Keyword_DO: {
+                    parser_next_token(parser);
+                    statement.type = StatementType_DO_WHILE;
+                    statement.value.loop_statement.body = malloc(sizeof(Statement));
+                    *statement.value.loop_statement.body = parser_parse_statement(parser);
+                    parser_expect_token(parser, (Token){.type = TokenType_KEYWORD, .value.keyword = Keyword_WHILE});
+                    statement.value.loop_statement.condition = malloc(sizeof(Expression));
+                    parser_expect(parser, TokenType_LPAREN);
+                    *statement.value.loop_statement.condition = parser_parse_expression(parser, 0);
+                    parser_expect(parser, TokenType_RPAREN);
+                    parser_expect(parser, TokenType_SEMICOLON);
+                    break;
+                }
+                case Keyword_FOR: {
+                    parser_next_token(parser);
+                    statement.type = StatementType_FOR;
+                    parser_expect(parser, TokenType_LPAREN);
+                    if (parser_peek(parser).type == TokenType_KEYWORD && parser_peek(parser).value.keyword == Keyword_INT) {
+                        statement.value.for_statement.init.type = ForInit_DECLARATION;
+                        statement.value.for_statement.init.value.declaration = parser_parse_declaration(parser);
+                    } else if (parser_peek(parser).type == TokenType_SEMICOLON) {
+                        statement.value.for_statement.init.type = ForInit_EXPRESSION;
+                        statement.value.for_statement.init.value.expression = NULL;
+                        parser_expect(parser, TokenType_SEMICOLON);
+                    } else {
+                        statement.value.for_statement.init.type = ForInit_EXPRESSION;
+                        statement.value.for_statement.init.value.expression = malloc(sizeof(Expression));
+                        *statement.value.for_statement.init.value.expression = parser_parse_expression(parser, 0);
+                        parser_expect(parser, TokenType_SEMICOLON);
+                    }
+
+                    if (parser_peek(parser).type != TokenType_SEMICOLON) {
+                        statement.value.for_statement.condition = malloc(sizeof(Expression));
+                        *statement.value.for_statement.condition = parser_parse_expression(parser, 0);
+                    } else {
+                        statement.value.for_statement.condition = NULL;
+                    }
+                    parser_expect(parser, TokenType_SEMICOLON);
+                    if (parser_peek(parser).type != TokenType_RPAREN) {
+                        statement.value.for_statement.post = malloc(sizeof(Expression));
+                        *statement.value.for_statement.post = parser_parse_expression(parser, 0);
+                    } else {
+                        statement.value.for_statement.post = NULL;
+                    }
+                    parser_expect(parser, TokenType_RPAREN);
+                    statement.value.for_statement.body = malloc(sizeof(Statement));
+                    *statement.value.for_statement.body = parser_parse_statement(parser);
+                    break;
+                }
                 default: {
                     fprintf(stderr, "Unexpected keyword %d\n", token.value.keyword);
                     exit(1);
@@ -145,6 +205,8 @@ Statement parser_parse_statement(Parser* parser) {
             statement.type = StatementType_BLOCK;
             statement.value.block = malloc(sizeof(ParserBlock));
             *statement.value.block = parser_parse_block(parser);
+            // expect rbrace
+            parser_expect(parser, TokenType_RBRACE);
             break;
         default:
             // this is literally just the return code but with a different type
@@ -303,7 +365,6 @@ Expression parser_parse_expression(Parser* parser, int min_prec) {
     Expression left = parser_parse_factor(parser);
     Token next_token = parser_peek(parser);
     while (get_precedence(next_token.type) >= min_prec) {
-        printf("next_token: %d min_prec: %d\n", next_token.type, min_prec);
         if (next_token.type == TokenType_ASSIGN) {
             parser_next_token(parser);
 
@@ -325,7 +386,6 @@ Expression parser_parse_expression(Parser* parser, int min_prec) {
             next_token = parser_peek(parser);
             continue;
         }
-        printf("sigma\n");
 
         enum ExpressionBinaryType op_assign = is_op_assign(next_token.type);
         if ((int) op_assign >= 0) {
@@ -600,6 +660,24 @@ void free_statement(Statement statement) {
         case StatementType_BLOCK:
             free_block(*statement.value.block);
             free(statement.value.block);
+            break;
+        case StatementType_WHILE:
+        case StatementType_DO_WHILE:
+            free_expression(*statement.value.loop_statement.condition);
+            free(statement.value.loop_statement.body);
+            break;
+        case StatementType_FOR:
+            if (statement.value.for_statement.init.type == ForInit_DECLARATION) {
+                free_declaration(statement.value.for_statement.init.value.declaration);
+            } else if (statement.value.for_statement.init.value.expression != NULL) {
+                free_expression(*statement.value.for_statement.init.value.expression);
+            }
+
+            free_expression(*statement.value.for_statement.condition);
+            free_statement(*statement.value.for_statement.body);
+            break;
+        case StatementType_BREAK:
+        case StatementType_CONTINUE:
             break;
     }
 }
