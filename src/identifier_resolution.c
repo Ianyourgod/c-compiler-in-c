@@ -97,7 +97,7 @@ ParserProgram resolve_identifiers(ParserProgram program) {
     IdentifierTable table = identifier_table_new();
     ParserProgram new_program = {NULL};
 
-    new_program.function = malloc(sizeof(ParserFunctionDefinition));
+    new_program.function = malloc_type(ParserFunctionDefinition);
     *new_program.function = resolve_identifiers_function(*program.function, &table);
 
     return new_program;
@@ -135,6 +135,11 @@ Statement resolve_identifiers_statement(Statement statement, IdentifierTable* ta
             *statement.value.expr = expr;
             break;
         }
+        case StatementType_CASE: {
+            Expression expr = resolve_identifiers_expression(*statement.value.case_statement.expr, table);
+            *statement.value.case_statement.expr = expr;
+            break;
+        }
         case StatementType_IF: {
             Expression condition = resolve_identifiers_expression(*statement.value.if_statement.condition, table);
             *statement.value.if_statement.condition = condition;
@@ -149,6 +154,7 @@ Statement resolve_identifiers_statement(Statement statement, IdentifierTable* ta
             break;
         }
         case StatementType_WHILE:
+        case StatementType_SWITCH:
         case StatementType_DO_WHILE: {
             Expression condition = resolve_identifiers_expression(*statement.value.loop_statement.condition, table);
             *statement.value.loop_statement.condition = condition;

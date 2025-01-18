@@ -209,6 +209,10 @@ Token lexer_next_token(Lexer* lexer) {
                         return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_BREAK});
                     } else if (length == 8 && strncmp(start, "continue", 8) == 0) {
                         return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_CONTINUE});
+                    } else if (length == 6 && strncmp(start, "switch", 6) == 0) {
+                        return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_SWITCH});
+                    } else if (length == 4 && strncmp(start, "case", 4) == 0) {
+                        return token_new(TokenType_KEYWORD, (TokenValue){.keyword = Keyword_CASE});
                     } else {
                         return token_new(TokenType_IDENTIFIER, (TokenValue){.identifier = strndup(start, length)});
                     }

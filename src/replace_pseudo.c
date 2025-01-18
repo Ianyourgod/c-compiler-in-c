@@ -2,12 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "easy_stuff.h"
 #include "replace_pseudo.h"
 
 CodegenProgram replace_pseudo(CodegenProgram program) {
     CodegenProgram new_program = {NULL};
 
-    new_program.function = malloc(sizeof(CodegenFunctionDefinition));
+    new_program.function = malloc_type(CodegenFunctionDefinition);
     *new_program.function = replace_pseudo_function(*program.function);
 
     return new_program;

@@ -1,11 +1,12 @@
 #include <stdlib.h>
 
 #include "code_gen.h"
+#include "easy_stuff.h"
 
 CodegenProgram codegen_generate_program(IRProgram program) {
     CodegenProgram codegen_program = {NULL};
 
-    codegen_program.function = malloc(sizeof(CodegenFunctionDefinition) * 1);
+    codegen_program.function = malloc_type(CodegenFunctionDefinition);
     *codegen_program.function = codegen_generate_function(*program.function);
 
     return codegen_program;

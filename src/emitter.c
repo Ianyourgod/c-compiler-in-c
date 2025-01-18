@@ -6,7 +6,7 @@
 #include "easy_stuff.h"
 
 char* emit_program(CodegenProgram program) {
-    char* output = malloc(1);
+    char* output = (char*)malloc(1);
     output[0] = '\0';
 
     for (int i = 0; i < 1; i++) {
@@ -20,7 +20,7 @@ char* emit_program(CodegenProgram program) {
 }
 
 char* emit_function_definition(CodegenFunctionDefinition function) {
-    char* output = malloc(strlen(function.identifier) + 3);
+    char* output = (char*)malloc(strlen(function.identifier) + 3);
     sprintf(output, "%s:\n", function.identifier);
 
     char* function_body = emit_function_body(function.body);
@@ -31,7 +31,7 @@ char* emit_function_definition(CodegenFunctionDefinition function) {
     return output;
 }
 char* emit_function_body(CodegenFunctionBody body) {
-    char* output = malloc(1);
+    char* output = (char*)malloc(1);
     output[0] = '\0';
 
     for (int i = 0; i < body.length; i++) {

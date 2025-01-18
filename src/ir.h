@@ -3,6 +3,7 @@
 
 #include "parser.h"
 #include "easy_stuff.h"
+#include "loop_labeling.h"
 
 typedef struct IRProgram {
     struct IRFunctionDefinition* function;
@@ -98,9 +99,11 @@ typedef struct IRFunctionDefinition {
 
 typedef struct IRGenerator {
     int tmp_count;
+    SwitchCases switch_cases;
+
 } IRGenerator;
 
-IRGenerator ir_generator_new();
+IRGenerator ir_generator_new(SwitchCases switch_cases);
 IRProgram ir_generate_program(IRGenerator* generator, ParserProgram program);
 IRFunctionDefinition ir_generate_function(IRGenerator* generator, ParserFunctionDefinition function);
 void ir_generate_block(IRGenerator* generator, ParserBlock block, IRFunctionBody* instructions);

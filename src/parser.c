@@ -12,7 +12,7 @@ Parser parser_new(Token* tokens) {
 
 ParserProgram parser_parse(Parser* parser) {
     ParserProgram program = {0};
-    program.function = malloc(sizeof(ParserFunctionDefinition));
+    program.function = malloc_type(ParserFunctionDefinition);
     *program.function = parser_parse_function(parser);
     return program;
 }
@@ -70,6 +70,8 @@ ParserBlock parser_parse_block(Parser* parser) {
         block.length++;
     }
 
+    parser_expect(parser, TokenType_RBRACE);
+
     return block;
 }
 
@@ -89,7 +91,7 @@ Declaration parser_parse_declaration(Parser* parser) {
 
     if (parser_peek(parser).type == TokenType_ASSIGN) {
         parser_next_token(parser);
-        declaration.expression = malloc(sizeof(Expression));
+        declaration.expression = malloc_type(Expression);
         *declaration.expression = parser_parse_expression(parser, 0);
     } else {
         declaration.expression = NULL;
@@ -111,7 +113,7 @@ Statement parser_parse_statement(Parser* parser) {
                 case Keyword_RETURN: {
                     parser_next_token(parser);
                     statement.type = StatementType_RETURN;
-                    statement.value.expr = malloc(sizeof(Expression));
+                    statement.value.expr = malloc_type(Expression);
                     *statement.value.expr = parser_parse_expression(parser, 0);
                     // expect semicolon
                     parser_expect(parser, TokenType_SEMICOLON);
@@ -120,15 +122,15 @@ Statement parser_parse_statement(Parser* parser) {
                 case Keyword_IF: {
                     parser_next_token(parser);
                     statement.type = StatementType_IF;
-                    statement.value.if_statement.condition = malloc(sizeof(Expression));
+                    statement.value.if_statement.condition = malloc_type(Expression);
                     parser_expect(parser, TokenType_LPAREN);
                     *statement.value.if_statement.condition = parser_parse_expression(parser, 0);
                     parser_expect(parser, TokenType_RPAREN);
-                    statement.value.if_statement.then_block = malloc(sizeof(Statement));
+                    statement.value.if_statement.then_block = malloc_type(Statement);
                     *statement.value.if_statement.then_block = parser_parse_statement(parser);
                     if (parser_peek(parser).type == TokenType_KEYWORD && parser_peek(parser).value.keyword == Keyword_ELSE) {
                         parser_next_token(parser);
-                        statement.value.if_statement.else_block = malloc(sizeof(Statement));
+                        statement.value.if_statement.else_block = malloc_type(Statement);
                         *statement.value.if_statement.else_block = parser_parse_statement(parser);
                     } else {
                         statement.value.if_statement.else_block = NULL;
@@ -138,21 +140,21 @@ Statement parser_parse_statement(Parser* parser) {
                 case Keyword_WHILE: {
                     parser_next_token(parser);
                     statement.type = StatementType_WHILE;
-                    statement.value.loop_statement.condition = malloc(sizeof(Expression));
+                    statement.value.loop_statement.condition = malloc_type(Expression);
                     parser_expect(parser, TokenType_LPAREN);
                     *statement.value.loop_statement.condition = parser_parse_expression(parser, 0);
                     parser_expect(parser, TokenType_RPAREN);
-                    statement.value.loop_statement.body = malloc(sizeof(Statement));
+                    statement.value.loop_statement.body = malloc_type(Statement);
                     *statement.value.loop_statement.body = parser_parse_statement(parser);
                     break;
                 }
                 case Keyword_DO: {
                     parser_next_token(parser);
                     statement.type = StatementType_DO_WHILE;
-                    statement.value.loop_statement.body = malloc(sizeof(Statement));
+                    statement.value.loop_statement.body = malloc_type(Statement);
                     *statement.value.loop_statement.body = parser_parse_statement(parser);
                     parser_expect_token(parser, (Token){.type = TokenType_KEYWORD, .value.keyword = Keyword_WHILE});
-                    statement.value.loop_statement.condition = malloc(sizeof(Expression));
+                    statement.value.loop_statement.condition = malloc_type(Expression);
                     parser_expect(parser, TokenType_LPAREN);
                     *statement.value.loop_statement.condition = parser_parse_expression(parser, 0);
                     parser_expect(parser, TokenType_RPAREN);
@@ -172,27 +174,58 @@ Statement parser_parse_statement(Parser* parser) {
                         parser_expect(parser, TokenType_SEMICOLON);
                     } else {
                         statement.value.for_statement.init.type = ForInit_EXPRESSION;
-                        statement.value.for_statement.init.value.expression = malloc(sizeof(Expression));
+                        statement.value.for_statement.init.value.expression = malloc_type(Expression);
                         *statement.value.for_statement.init.value.expression = parser_parse_expression(parser, 0);
                         parser_expect(parser, TokenType_SEMICOLON);
                     }
 
                     if (parser_peek(parser).type != TokenType_SEMICOLON) {
-                        statement.value.for_statement.condition = malloc(sizeof(Expression));
+                        statement.value.for_statement.condition = malloc_type(Expression);
                         *statement.value.for_statement.condition = parser_parse_expression(parser, 0);
                     } else {
                         statement.value.for_statement.condition = NULL;
                     }
                     parser_expect(parser, TokenType_SEMICOLON);
                     if (parser_peek(parser).type != TokenType_RPAREN) {
-                        statement.value.for_statement.post = malloc(sizeof(Expression));
+                        statement.value.for_statement.post = malloc_type(Expression);
                         *statement.value.for_statement.post = parser_parse_expression(parser, 0);
                     } else {
                         statement.value.for_statement.post = NULL;
                     }
                     parser_expect(parser, TokenType_RPAREN);
-                    statement.value.for_statement.body = malloc(sizeof(Statement));
+                    statement.value.for_statement.body = malloc_type(Statement);
                     *statement.value.for_statement.body = parser_parse_statement(parser);
+                    break;
+                }
+                case Keyword_BREAK:
+                    parser_next_token(parser);
+                    statement.type = StatementType_BREAK;
+                    // expect semicolon
+                    parser_expect(parser, TokenType_SEMICOLON);
+                    break;
+                case Keyword_CONTINUE:
+                    parser_next_token(parser);
+                    statement.type = StatementType_CONTINUE;
+                    // expect semicolon
+                    parser_expect(parser, TokenType_SEMICOLON);
+                    break;
+                case Keyword_SWITCH: {
+                    parser_next_token(parser);
+                    statement.type = StatementType_SWITCH;
+                    statement.value.loop_statement.condition = malloc_aligned_type(Expression);
+                    parser_expect(parser, TokenType_LPAREN);
+                    *statement.value.loop_statement.condition = parser_parse_expression(parser, 0);
+                    parser_expect(parser, TokenType_RPAREN);
+                    statement.value.loop_statement.body = malloc_type(Statement);
+                    *statement.value.loop_statement.body = parser_parse_statement(parser);
+                    break;
+                }
+                case Keyword_CASE: {
+                    parser_next_token(parser);
+                    statement.type = StatementType_CASE;
+                    statement.value.case_statement.expr = malloc_type(Expression);
+                    *statement.value.case_statement.expr = parser_parse_expression(parser, 0);
+                    parser_expect(parser, TokenType_COLON);
                     break;
                 }
                 default: {
@@ -203,15 +236,13 @@ Statement parser_parse_statement(Parser* parser) {
             break;
         case TokenType_LBRACE:
             statement.type = StatementType_BLOCK;
-            statement.value.block = malloc(sizeof(ParserBlock));
+            statement.value.block = malloc_type(ParserBlock);
             *statement.value.block = parser_parse_block(parser);
-            // expect rbrace
-            parser_expect(parser, TokenType_RBRACE);
             break;
         default:
             // this is literally just the return code but with a different type
             statement.type = StatementType_EXPRESSION;
-            statement.value.expr = malloc(sizeof(Expression));
+            statement.value.expr = malloc_type(Expression);
             *statement.value.expr = parser_parse_expression(parser, 0);
             // expect semicolon
             parser_expect(parser, TokenType_SEMICOLON);
@@ -373,8 +404,8 @@ Expression parser_parse_expression(Parser* parser, int min_prec) {
             Expression expression = {
                 .type = ExpressionType_ASSIGN,
                 .value.assign = {
-                    .lvalue = malloc(sizeof(Expression)),
-                    .rvalue = malloc(sizeof(Expression)),
+                    .lvalue = malloc_type(Expression),
+                    .rvalue = malloc_type(Expression),
                 },
             };
 
@@ -397,8 +428,8 @@ Expression parser_parse_expression(Parser* parser, int min_prec) {
                 .type = ExpressionType_OP_ASSIGN,
                 .value.binary = {
                     .type = op_assign,
-                    .left = malloc(sizeof(Expression)),
-                    .right = malloc(sizeof(Expression)),
+                    .left = malloc_type(Expression),
+                    .right = malloc_type(Expression),
                 },
             };
 
@@ -422,9 +453,9 @@ Expression parser_parse_expression(Parser* parser, int min_prec) {
             Expression expression = {
                 .type = ExpressionType_TERNARY,
                 .value.ternary = {
-                    .condition = malloc(sizeof(Expression)),
-                    .then_expr = malloc(sizeof(Expression)),
-                    .else_expr = malloc(sizeof(Expression)),
+                    .condition = malloc_type(Expression),
+                    .then_expr = malloc_type(Expression),
+                    .else_expr = malloc_type(Expression),
                 },
             };
 
@@ -446,8 +477,8 @@ Expression parser_parse_expression(Parser* parser, int min_prec) {
 
         struct ExpressionBinary binary = {
             .type = type,
-            .left = malloc(sizeof(Expression)),
-            .right = malloc(sizeof(Expression)),
+            .left = malloc_type(Expression),
+            .right = malloc_type(Expression),
         };
 
         *binary.left = left;
@@ -489,7 +520,7 @@ Expression parser_parse_factor(Parser* parser) {
                 .value = {
                     .unary = {
                         .type = op,
-                        .expression = malloc(sizeof(Expression))
+                        .expression = malloc_type(Expression)
                     }
                 }
             };
@@ -546,7 +577,7 @@ Expression parser_parse_lower_factor(Parser* parser) {
 
             struct ExpressionUnary unary = {
                 .type = type,
-                .expression = malloc(sizeof(Expression)),
+                .expression = malloc_type(Expression),
             };
 
             *unary.expression = parser_parse_factor(parser);
@@ -675,6 +706,13 @@ void free_statement(Statement statement) {
 
             free_expression(*statement.value.for_statement.condition);
             free_statement(*statement.value.for_statement.body);
+            break;
+        case StatementType_SWITCH:
+            free_expression(*statement.value.loop_statement.condition);
+            free(statement.value.loop_statement.body);
+            break;
+        case StatementType_CASE:
+            free_expression(*statement.value.case_statement.expr);
             break;
         case StatementType_BREAK:
         case StatementType_CONTINUE:

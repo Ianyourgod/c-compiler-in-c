@@ -59,6 +59,8 @@ typedef enum KeywordType {
     Keyword_DO,
     Keyword_BREAK,
     Keyword_CONTINUE,
+    Keyword_SWITCH,
+    Keyword_CASE,
 } KeywordType;
 
 typedef union TokenValue {

@@ -1,6 +1,8 @@
 #ifndef VEC_H
 #define VEC_H
 
+#include <stdlib.h>
+
 #define VEC(T) \
     struct { \
         T* data; \
@@ -22,9 +24,19 @@
     } \
     (vec)->data[(vec)->length++] = value; \
 
+#define vec_pop(vec) \
+    (vec).data[(vec).length--]
+
+#define vecptr_pop(vec) \
+    (vec)->data[(vec)->length--]
+
 #define vec_free(vec) \
     free((vec).data)
 
 int quick_log10(int n);
+
+#define malloc_type(T) (T*)malloc(sizeof(T))
+#define malloc_n_type(T, n) (T*)malloc(sizeof(T) * n)
+#define malloc_aligned_type(T) (T*)aligned_alloc(__alignof__(T), sizeof(T))
 
 #endif

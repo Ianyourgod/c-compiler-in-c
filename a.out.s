@@ -21,32 +21,30 @@ hlt
 main:
 ldi r10 88
 str r15 r10 -4
-ldi r10 2
-str r15 r10 -8
-ldi r10 0
-str r15 r10 -12
-.1.loop.start:
-lod r15 r10 -12
-ldi r11 5
-lt r10 r11 r12
-str r15 r12 -16
-lod r15 r10 -16
-cmp r10 r0
-jc eq .1.loop.break
-lod r15 r10 -8
-ldi r11 2
-mul r10 r11 r12
+lod r15 r10 -4
+ldi r11 4
+eq r10 r11 r12
 str r15 r12 -8
-.1.loop.continue:
-lod r15 r10 -12
-str r15 r10 -20
-lod r15 r10 -12
-ldi r11 1
-add r10 r11 r12
+lod r15 r10 -8
+cmp r10 r0
+jc ne .switch.case.0
+lod r15 r10 -4
+ldi r11 88
+eq r10 r11 r12
 str r15 r12 -12
-jmp .1.loop.start
+lod r15 r10 -12
+cmp r10 r0
+jc ne .switch.case.1
+.switch.case.0:
+ldi r2 3
+ret
+jmp .1.loop.break
+.switch.case.1:
+ldi r2 4
+ret
+jmp .1.loop.break
 .1.loop.break:
-lod r15 r2 -8
+ldi r2 0
 ret
 ldi r2 0
 ret

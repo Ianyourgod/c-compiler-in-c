@@ -35,7 +35,7 @@ struct Args parse_args(int argc, char** argv) {
         }
     }
 
-    args.inputs = malloc(sizeof(char*) * args.input_length);
+    args.inputs = (char**)malloc(sizeof(char*) * args.input_length);
 
     int inputs = 0;
 
@@ -66,7 +66,7 @@ char* compile(char* input) {
     printf("pre lex\n");
     Lexer lexer = lexer_new(input);
 
-    Token* tokens = malloc(sizeof(Token));
+    Token* tokens = (Token*)malloc(sizeof(Token));
     int token_count = 0;
     int length = 1;
 
@@ -89,10 +89,11 @@ char* compile(char* input) {
     ParserProgram ident_res_program = resolve_identifiers(program);
 
     printf("pre loop label\n");
-    ParserProgram loop_label_program = label_loops(ident_res_program);
+    struct ProgramAndStructs loop_label_ret = label_loops(ident_res_program);
+    ParserProgram loop_label_program = loop_label_ret.program;
 
     printf("pre ir\n");
-    IRGenerator generator = ir_generator_new();
+    IRGenerator generator = ir_generator_new(loop_label_ret.switch_cases);
     IRProgram ir_program = ir_generate_program(&generator, loop_label_program);
 
     printf("pre codegen\n");
@@ -112,7 +113,8 @@ char* compile(char* input) {
 }
 
 void assemble(char* path, char* output) {
-    char* command = malloc(strlen(path) + 17);
+    printf("pre assemble\n");
+    char* command = (char*)malloc(strlen(path) + 17 + strlen(output));
     sprintf(command, "./assembler %s -o %s", path, output);
     int out = system(command);
 
@@ -135,7 +137,7 @@ char* read_file(char* path) {
     size_t length = (size_t) ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    char* buffer = malloc(length + 1);
+    char* buffer = (char*)malloc(length + 1);
     size_t frreeeead = fread(buffer, 1, length, file);
 
     if (frreeeead != length) {
@@ -162,7 +164,7 @@ int quick_log10(int n) {
 int main(int argc, char** argv) {
     struct Args args = parse_args(argc, argv);
 
-    char* assembly_output_file = malloc(sizeof(char) * strlen(args.output) + 3);
+    char* assembly_output_file = (char*)malloc(sizeof(char) * strlen(args.output) + 3);
     sprintf(assembly_output_file, "%s.s", args.output);
 
     // clear output file

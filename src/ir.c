@@ -7,13 +7,13 @@
 #include "ir.h"
 #include "easy_stuff.h"
 
-IRGenerator ir_generator_new() {
-    return (IRGenerator){0};
+IRGenerator ir_generator_new(SwitchCases switch_cases) {
+    return (IRGenerator){0, switch_cases};
 }
 
 IRProgram ir_generate_program(IRGenerator* generator, ParserProgram program) {
     IRProgram ir_program = {0};
-    ir_program.function = malloc(sizeof(IRFunctionDefinition));
+    ir_program.function = malloc_type(IRFunctionDefinition);
     *ir_program.function = ir_generate_function(generator, *program.function);
     return ir_program;
 }
@@ -400,6 +400,98 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
             vecptr_push(instructions, break_label_instruction);
 
             break;
+        }
+        case StatementType_SWITCH: {
+            char* break_label;
+            if (0>asprintf(&break_label, ".%d.loop.break", statement.value.loop_statement.label)) {
+                fprintf(stderr, "Error creating break label\n");
+                exit(1);
+            }
+
+            // memalign cond_expr using posix_memalign
+            Expression cond_expr = *statement.value.loop_statement.condition;
+
+            IRVal condition = ir_generate_expression(generator, cond_expr, instructions);
+
+            SwitchCases switch_cases = generator->switch_cases;
+
+            for (int i = 0; i < switch_cases.length; i++) {
+                struct SwitchCase switch_case = switch_cases.data[i];
+                if (switch_case.switch_label == statement.value.loop_statement.label) {
+                    IRVal cmping = ir_make_temp(generator);
+
+                    IRVal const_expr;
+                    switch (switch_case.expr->type) {
+                        case ExpressionType_INT:
+                            const_expr = (IRVal){.type = IRValType_Int, .value = {switch_case.expr->value.integer}};
+                            break;
+                        default:
+                            fprintf(stderr, "Only integer constants are supported in switch cases\n");
+                            exit(1);
+                    }
+
+                    IRInstruction cmp = {
+                        .type = IRInstructionType_Binary,
+                        .value = {
+                            .binary = {
+                                .op = IRBinaryOp_Equal,
+                                .left = condition,
+                                .right = const_expr,
+                                .dst = cmping,
+                            },
+                        },
+                    };
+
+                    vecptr_push(instructions, cmp);
+
+                    char* case_label;
+                    if (0>asprintf(&case_label, ".switch.case.%d", switch_case.case_label)) {
+                        fprintf(stderr, "Error creating case label\n");
+                        exit(1);
+                    }
+
+                    IRInstruction jump_case = {
+                        .type = IRInstructionType_JumpIfNotZero,
+                        .value = {
+                            .jump_cond = {
+                                .val = cmping,
+                                .label = case_label,
+                            },
+                        },
+                    };
+
+                    vecptr_push(instructions, jump_case);
+                }
+            }
+
+            ir_generate_statement(generator, *statement.value.loop_statement.body, instructions);
+
+            IRInstruction break_label_instruction = {
+                .type = IRInstructionType_Label,
+                .value = {
+                    .label = break_label,
+                },
+            };
+
+            vecptr_push(instructions, break_label_instruction);
+
+            break;
+        }
+        case StatementType_CASE: {
+            char* case_label;
+            if (0>asprintf(&case_label, ".switch.case.%d", statement.value.case_statement.label)) {
+                fprintf(stderr, "Error creating case label\n");
+                exit(1);
+            }
+
+            IRInstruction case_label_instruction = {
+                .type = IRInstructionType_Label,
+                .value = {
+                    .label = case_label,
+                },
+            };
+
+            vecptr_push(instructions, case_label_instruction);
         }
     }
 }
@@ -844,7 +936,7 @@ IRVal ir_generate_expression(IRGenerator* generator, Expression expression, IRFu
 }
 
 char* ir_make_temp_name(IRGenerator* generator) {
-    char* name = malloc(quick_log10(generator->tmp_count) + 4);
+    char* name = (char*)malloc(quick_log10(generator->tmp_count) + 4);
     sprintf(name, ".t.%d", generator->tmp_count);
     generator->tmp_count++;
     return name;

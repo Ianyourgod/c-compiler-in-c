@@ -35,6 +35,8 @@ typedef enum StatementType {
     StatementType_DO_WHILE,
     StatementType_BREAK,
     StatementType_CONTINUE,
+    StatementType_SWITCH,
+    StatementType_CASE,
 } StatementType;
 
 struct ForInit {
@@ -60,6 +62,10 @@ typedef union StatementValue {
         struct Statement* body;
         int label;
     } loop_statement;
+    struct {
+        struct Expression* expr;
+        int label;
+    } case_statement;
     struct {
         struct ForInit init;
         struct Expression* condition; // can be NULL

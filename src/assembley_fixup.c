@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "assembley_fixup.h"
+#include "easy_stuff.h"
 
 int is_imm(CodegenOperandType ty) {
     return ty == CodegenOperandType_IMMEDIATE;
@@ -91,7 +92,7 @@ void move_to_reg(CodegenOperand op, int target_reg, CodegenFunctionBody* instruc
 CodegenProgram fixup_program(CodegenProgram program) {
     CodegenProgram new_program = {NULL};
 
-    new_program.function = malloc(sizeof(CodegenFunctionDefinition));
+    new_program.function = malloc_type(CodegenFunctionDefinition);
     *new_program.function = fixup_function(*program.function);
 
     return new_program;
