@@ -97,8 +97,11 @@ ParserProgram resolve_identifiers(ParserProgram program) {
     IdentifierTable table = identifier_table_new();
     ParserProgram new_program = {NULL};
 
-    new_program.function = malloc_type(ParserFunctionDefinition);
-    *new_program.function = resolve_identifiers_function(*program.function, &table);
+    for (int i = 0; i < program.length; i++) {
+        ParserFunctionDefinition function = program.data[i];
+        ParserFunctionDefinition new_function = resolve_identifiers_function(function, &table);
+        vec_push(new_program, new_function);
+    }
 
     return new_program;
 }
@@ -106,7 +109,9 @@ ParserProgram resolve_identifiers(ParserProgram program) {
 ParserFunctionDefinition resolve_identifiers_function(ParserFunctionDefinition function, IdentifierTable* table) {
     ParserFunctionDefinition new_function = {strdup(function.identifier), parser_block_new()};
 
-    new_function.body = resolve_identifiers_block(function.body, table);
+    IdentifierTable new_table = ident_table_clone(table);
+
+    new_function.body = resolve_identifiers_block(function.body, &new_table);
 
     return new_function;
 }

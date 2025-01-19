@@ -6,26 +6,45 @@
 #include "easy_stuff.h"
 
 char* emit_program(CodegenProgram program) {
-    char* output = (char*)malloc(1);
-    output[0] = '\0';
+    char** output = NULL;
+    int output_length = 0;
+    int output_capacity = 0;
+    int total_length = 0;
 
-    for (int i = 0; i < 1; i++) {
-        char* function_definition = emit_function_definition(program.function[i]);
-        output = realloc(output, strlen(output) + strlen(function_definition) + 1);
-        strcat(output, function_definition);
-        free(function_definition);
+    for (int i = 0; i < program.length; i++) {
+        if (output_length == output_capacity) {
+            output_capacity = output_capacity == 0 ? 1 : output_capacity * 2;
+            output = realloc(output, sizeof(char*) * output_capacity);
+        }
+
+        char* function = emit_function_definition(program.data[i]);
+
+        total_length += strlen(function);
+
+        output[output_length++] = function;
     }
 
-    return output;
+    char* final_output = malloc(total_length + 1);
+    final_output[0] = '\0';
+
+    for (int i = 0; i < output_length; i++) {
+        strcat(final_output, output[i]);
+        free(output[i]);
+    }
+
+    free(output);
+
+    return final_output;
 }
 
 char* emit_function_definition(CodegenFunctionDefinition function) {
-    char* output = (char*)malloc(strlen(function.identifier) + 3);
-    sprintf(output, "%s:\n", function.identifier);
+    char* output = (char*)malloc(strlen(function.identifier) + 27);
+    sprintf(output, "%s:\npush r15\nadd r14 r0 r15\n", function.identifier);
 
     char* function_body = emit_function_body(function.body);
     output = realloc(output, strlen(output) + strlen(function_body) + 1);
     strcat(output, function_body);
+
     free(function_body);
 
     return output;
@@ -172,8 +191,8 @@ char* emit_instruction(CodegenInstruction instruction) {
             return output;
         }
         case CodegenInstructionType_ALLOCATE_STACK: {
-            char* output = malloc(21 + quick_log10(instruction.value.immediate));
-            sprintf(output, "ldi r10 %d\nsub r14 r10\n", instruction.value.immediate);
+            char* output = malloc(26 + quick_log10(instruction.value.immediate));
+            sprintf(output, "ldi r10 %d\nsub r14 r10 r14\n", instruction.value.immediate);
 
             return output;
         }
@@ -202,7 +221,7 @@ char* emit_instruction(CodegenInstruction instruction) {
             return output;
         }
         case CodegenInstructionType_RET: {
-            return strdup("ret\n");
+            return strdup("add r15 r0 r14\npop r15\nret\n");
         }
         case CodegenInstructionType_CMP: {
             char* left = emit_operand(instruction.value.cmp.left);

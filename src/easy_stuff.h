@@ -37,6 +37,5 @@ int quick_log10(int n);
 
 #define malloc_type(T) (T*)malloc(sizeof(T))
 #define malloc_n_type(T, n) (T*)malloc(sizeof(T) * n)
-#define malloc_aligned_type(T) (T*)aligned_alloc(__alignof__(T), sizeof(T))
 
 #endif

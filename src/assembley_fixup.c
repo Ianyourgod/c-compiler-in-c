@@ -89,23 +89,34 @@ void move_to_reg(CodegenOperand op, int target_reg, CodegenFunctionBody* instruc
     }
 }
 
-CodegenProgram fixup_program(CodegenProgram program) {
-    CodegenProgram new_program = {NULL};
+CodegenProgram fixup_program(struct ReplaceResult program) {
+    CodegenProgram new_program = {NULL, 0, 0};
 
-    new_program.function = malloc_type(CodegenFunctionDefinition);
-    *new_program.function = fixup_function(*program.function);
+    for (int i = 0; i < program.length; i++) {
+        CodegenFunctionDefinition function = fixup_function(program.data[i]);
+        vec_push(new_program, function);
+    }
 
     return new_program;
 }
-CodegenFunctionDefinition fixup_function(CodegenFunctionDefinition function) {
+CodegenFunctionDefinition fixup_function(struct FuncAndOffset function) {
     CodegenFunctionDefinition new_function = {NULL};
 
-    new_function.identifier = function.identifier;
+    new_function.identifier = function.function.identifier;
     CodegenFunctionBody new_body = {NULL, 0, 0};
     new_function.body = new_body;
 
-    for (int i = 0; i < function.body.length; i++) {
-        CodegenInstruction instruction = function.body.data[i];
+    CodegenInstruction allocate_stack = {
+        .type = CodegenInstructionType_ALLOCATE_STACK,
+        .value = {
+            .immediate = -function.offset,
+        },
+    };
+
+    vecptr_push(&new_function.body, allocate_stack);
+
+    for (int i = 0; i < function.function.body.length; i++) {
+        CodegenInstruction instruction = function.function.body.data[i];
         fixup_instruction(instruction, &new_function.body);
     }
 

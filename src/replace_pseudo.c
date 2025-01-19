@@ -5,46 +5,37 @@
 #include "easy_stuff.h"
 #include "replace_pseudo.h"
 
-CodegenProgram replace_pseudo(CodegenProgram program) {
-    CodegenProgram new_program = {NULL};
+struct ReplaceResult replace_pseudo(CodegenProgram program) {
+    struct ReplaceResult new_program = {NULL, 0, 0};
 
-    new_program.function = malloc_type(CodegenFunctionDefinition);
-    *new_program.function = replace_pseudo_function(*program.function);
+    for (int i = 0; i < program.length; i++) {
+        struct FuncAndOffset function = replace_pseudo_function(program.data[i]);
+        vecptr_push(&new_program, function);
+    }
 
     return new_program;
 }
 
-CodegenFunctionDefinition replace_pseudo_function(CodegenFunctionDefinition function) {
-    CodegenFunctionDefinition new_function = {NULL};
+struct FuncAndOffset replace_pseudo_function(CodegenFunctionDefinition function) {
+    struct FuncAndOffset new_function = {{0}, 0};
 
-    new_function.identifier = function.identifier;
-    new_function.body = replace_pseudo_function_body(function.body);
+    new_function.function.identifier = function.identifier;
+    CodegenFunctionBody new_body = {NULL, 0, 0};
+
+    PseudoInfoMap map = { -2, 0, 0, NULL };
+
+    for (int i = 0; i < function.body.length; i++) {
+        CodegenInstruction instruction = replace_pseudo_instruction(function.body.data[i], &map);
+        vec_push(new_body, instruction);
+    }
+
+    new_function.function.body = new_body;
+
+    new_function.offset = map.current_idx + 2;
 
     return new_function;
 }
 
-CodegenFunctionBody replace_pseudo_function_body(CodegenFunctionBody body) {
-    CodegenFunctionBody new_body = {NULL, 0, 0};
-
-    PseudoInfoMap map = { -4, 0, 0, NULL };
-
-    for (int i = 0; i < body.length; i++) {
-        CodegenInstruction instruction = replace_pseudo_instruction(body.data[i], &map);
-        //vec_push(new_body, instruction);
-
-        if (new_body.length == new_body.capacity) {
-            new_body.capacity = new_body.capacity == 0 ? 1 : new_body.capacity * 2;
-
-            new_body.data = realloc(new_body.data, sizeof(instruction) * new_body.capacity);
-        }
-        
-        new_body.data[new_body.length] = instruction;
-
-        new_body.length++;
-    }
-
-    return new_body;
-}
 CodegenInstruction replace_pseudo_instruction(CodegenInstruction instruction, PseudoInfoMap* map) {
     switch (instruction.type) {
         case CodegenInstructionType_MOV:
@@ -117,7 +108,7 @@ void pseudomap_insert(PseudoInfoMap* map, char* name) {
     }
 
     PseudoInfo entry = { .name = name, .idx = map->current_idx };
-    map->current_idx -= 4;
+    map->current_idx -= 2;
 
     map->map_start[map->pseudo_count++] = entry;
 }

@@ -12,8 +12,17 @@ Parser parser_new(Token* tokens) {
 
 ParserProgram parser_parse(Parser* parser) {
     ParserProgram program = {0};
-    program.function = malloc_type(ParserFunctionDefinition);
-    *program.function = parser_parse_function(parser);
+
+    while (parser->tokens[parser->index].type != TokenType_EOF) {
+        if (program.length == program.capacity) {
+            program.capacity = program.capacity == 0 ? 1 : program.capacity * 2;
+            program.data = realloc(program.data, sizeof(ParserFunctionDefinition) * program.capacity);
+        }
+
+        program.data[program.length] = parser_parse_function(parser);
+        program.length++;
+    }
+
     return program;
 }
 
@@ -212,7 +221,7 @@ Statement parser_parse_statement(Parser* parser) {
                 case Keyword_SWITCH: {
                     parser_next_token(parser);
                     statement.type = StatementType_SWITCH;
-                    statement.value.loop_statement.condition = malloc_aligned_type(Expression);
+                    statement.value.loop_statement.condition = malloc_type(Expression);
                     parser_expect(parser, TokenType_LPAREN);
                     *statement.value.loop_statement.condition = parser_parse_expression(parser, 0);
                     parser_expect(parser, TokenType_RPAREN);
@@ -646,8 +655,10 @@ char* expression_to_string(Expression expression) {
 */
 
 void free_program(ParserProgram program) {
-    free_function_definition(*program.function);
-    free(program.function);
+    for (int i = 0; i < program.length; i++) {
+        free_function_definition(program.data[i]);
+    }
+    free(program.data);
 }
 void free_function_definition(ParserFunctionDefinition function) {
     free(function.identifier);

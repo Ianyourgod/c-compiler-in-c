@@ -93,14 +93,14 @@ char* compile(char* input) {
     ParserProgram loop_label_program = loop_label_ret.program;
 
     printf("pre ir\n");
-    IRGenerator generator = ir_generator_new(loop_label_ret.switch_cases);
+    IRGenerator generator = ir_generator_new(loop_label_ret.switch_cases_vec);
     IRProgram ir_program = ir_generate_program(&generator, loop_label_program);
 
     printf("pre codegen\n");
     CodegenProgram codegen_program = codegen_generate_program(ir_program);
 
     printf("pre replace\n");
-    CodegenProgram replaced_pseudos = replace_pseudo(codegen_program);
+    struct ReplaceResult replaced_pseudos = replace_pseudo(codegen_program);
 
     printf("pre fixup\n");
     CodegenProgram fixed = fixup_program(replaced_pseudos);

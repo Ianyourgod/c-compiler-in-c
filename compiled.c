@@ -10,3 +10,8 @@ int main(void) {
     }
     return 0;
 }
+
+int other_function(void) {
+    int a = 5;
+    return a + 1;
+}

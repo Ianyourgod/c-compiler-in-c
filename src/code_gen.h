@@ -115,7 +115,9 @@ typedef struct CodegenFunctionDefinition {
 } CodegenFunctionDefinition;
 
 typedef struct CodegenProgram {
-    CodegenFunctionDefinition* function;
+    CodegenFunctionDefinition* data;
+    int length;
+    int capacity;
 } CodegenProgram;
 
 CodegenProgram codegen_generate_program(IRProgram program);

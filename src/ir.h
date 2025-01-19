@@ -6,7 +6,9 @@
 #include "loop_labeling.h"
 
 typedef struct IRProgram {
-    struct IRFunctionDefinition* function;
+    struct IRFunctionDefinition* data;
+    int length;
+    int capacity;
 } IRProgram;
 
 typedef enum IRInstructionType {
@@ -99,16 +101,16 @@ typedef struct IRFunctionDefinition {
 
 typedef struct IRGenerator {
     int tmp_count;
-    SwitchCases switch_cases;
+    SwitchCases* switch_cases;
 
 } IRGenerator;
 
-IRGenerator ir_generator_new(SwitchCases switch_cases);
+IRGenerator ir_generator_new(SwitchCases* switch_cases);
 IRProgram ir_generate_program(IRGenerator* generator, ParserProgram program);
-IRFunctionDefinition ir_generate_function(IRGenerator* generator, ParserFunctionDefinition function);
-void ir_generate_block(IRGenerator* generator, ParserBlock block, IRFunctionBody* instructions);
+IRFunctionDefinition ir_generate_function(IRGenerator* generator, ParserFunctionDefinition function, int function_idx);
+void ir_generate_block(IRGenerator* generator, ParserBlock block, IRFunctionBody* instructions, int function_idx);
 void ir_generate_declaration(IRGenerator* generator, Declaration declaration, IRFunctionBody* instructions);
-void ir_generate_statement(IRGenerator* generator, Statement statement, IRFunctionBody* instructions);
+void ir_generate_statement(IRGenerator* generator, Statement statement, IRFunctionBody* instructions, int function_idx);
 IRVal ir_generate_expression(IRGenerator* generator, Expression expression, IRFunctionBody* instructions);
 char* ir_make_temp_name(IRGenerator* generator);
 IRVal ir_make_temp(IRGenerator* generator);

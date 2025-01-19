@@ -4,7 +4,9 @@
 #include "lexer.h"
 
 typedef struct ParserProgram {
-    struct ParserFunctionDefinition* function;
+    struct ParserFunctionDefinition* data;
+    int length;
+    int capacity;
 } ParserProgram;
 
 typedef struct ParserBlock {

@@ -40,7 +40,8 @@ struct FuncAndStructs {
 
 struct ProgramAndStructs {
     ParserProgram program;
-    SwitchCases switch_cases;
+    SwitchCases* switch_cases_vec;
+    int switch_cases_len;
 };
 
 struct ProgramAndStructs label_loops(ParserProgram program);

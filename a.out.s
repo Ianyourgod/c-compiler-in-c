@@ -19,32 +19,63 @@ cmp r14 r15
 jc < ...render_exit_code_1 
 hlt
 main:
+push r15
+add r14 r0 r15
+ldi r10 6
+sub r14 r10 r14
 ldi r10 88
-str r15 r10 -4
-lod r15 r10 -4
+str r15 r10 -2
+lod r15 r10 -2
 ldi r11 4
 eq r10 r11 r12
-str r15 r12 -8
-lod r15 r10 -8
+str r15 r12 -4
+lod r15 r10 -4
 cmp r10 r0
 jc ne .switch.case.0
-lod r15 r10 -4
+lod r15 r10 -2
 ldi r11 88
 eq r10 r11 r12
-str r15 r12 -12
-lod r15 r10 -12
+str r15 r12 -6
+lod r15 r10 -6
 cmp r10 r0
 jc ne .switch.case.1
 .switch.case.0:
 ldi r2 3
+add r15 r0 r14
+pop r15
 ret
 jmp .1.loop.break
 .switch.case.1:
 ldi r2 4
+add r15 r0 r14
+pop r15
 ret
 jmp .1.loop.break
 .1.loop.break:
 ldi r2 0
+add r15 r0 r14
+pop r15
 ret
 ldi r2 0
+add r15 r0 r14
+pop r15
+ret
+other_function:
+push r15
+add r14 r0 r15
+ldi r10 4
+sub r14 r10 r14
+ldi r10 5
+str r15 r10 -2
+lod r15 r10 -2
+ldi r11 1
+add r10 r11 r12
+str r15 r12 -4
+lod r15 r2 -4
+add r15 r0 r14
+pop r15
+ret
+ldi r2 0
+add r15 r0 r14
+pop r15
 ret

@@ -7,23 +7,27 @@
 #include "ir.h"
 #include "easy_stuff.h"
 
-IRGenerator ir_generator_new(SwitchCases switch_cases) {
+IRGenerator ir_generator_new(SwitchCases* switch_cases) {
     return (IRGenerator){0, switch_cases};
 }
 
 IRProgram ir_generate_program(IRGenerator* generator, ParserProgram program) {
     IRProgram ir_program = {0};
-    ir_program.function = malloc_type(IRFunctionDefinition);
-    *ir_program.function = ir_generate_function(generator, *program.function);
+
+    for (int i = 0; i < program.length; i++) {
+        IRFunctionDefinition function = ir_generate_function(generator, program.data[i], i);
+        vec_push(ir_program, function);
+    }
+
     return ir_program;
 }
 
-IRFunctionDefinition ir_generate_function(IRGenerator* generator, ParserFunctionDefinition function) {
+IRFunctionDefinition ir_generate_function(IRGenerator* generator, ParserFunctionDefinition function, int function_idx) {
     IRFunctionDefinition ir_function = {0};
     ir_function.identifier = function.identifier;
     ir_function.body = (IRFunctionBody) { NULL, 0, 0 };
 
-    ir_generate_block(generator, function.body, &ir_function.body);
+    ir_generate_block(generator, function.body, &ir_function.body, function_idx);
 
     IRInstruction final_return = {
         .type = IRInstructionType_Return,
@@ -37,7 +41,7 @@ IRFunctionDefinition ir_generate_function(IRGenerator* generator, ParserFunction
     return ir_function;
 }
 
-void ir_generate_block(IRGenerator* generator, ParserBlock block, IRFunctionBody* instructions) {
+void ir_generate_block(IRGenerator* generator, ParserBlock block, IRFunctionBody* instructions, int function_idx) {
     for (int i = 0; i < block.length; i++) {
         BlockItem item = block.statements[i];
         switch (item.type) {
@@ -45,7 +49,7 @@ void ir_generate_block(IRGenerator* generator, ParserBlock block, IRFunctionBody
                 ir_generate_declaration(generator, item.value.declaration, instructions);
                 break;
             case BlockItem_STATEMENT:
-                ir_generate_statement(generator, item.value.statement, instructions);
+                ir_generate_statement(generator, item.value.statement, instructions, function_idx);
                 break;
         }
     }
@@ -71,7 +75,7 @@ void ir_generate_declaration(IRGenerator* generator, Declaration declaration, IR
     vecptr_push(instructions, instruction);
 }
 
-void ir_generate_statement(IRGenerator* generator, Statement statement, IRFunctionBody* instructions) {
+void ir_generate_statement(IRGenerator* generator, Statement statement, IRFunctionBody* instructions, int function_idx) {
     switch (statement.type) {
         case StatementType_RETURN: {
             IRVal val = ir_generate_expression(generator, *statement.value.expr, instructions);
@@ -106,7 +110,7 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
 
             vecptr_push(instructions, jump_else);
 
-            ir_generate_statement(generator, *statement.value.if_statement.then_block, instructions);
+            ir_generate_statement(generator, *statement.value.if_statement.then_block, instructions, function_idx);
 
             if (statement.value.if_statement.else_block != NULL) {
                 IRInstruction jump_end = {
@@ -127,7 +131,7 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
 
                 vecptr_push(instructions, else_label_instruction);
 
-                ir_generate_statement(generator, *statement.value.if_statement.else_block, instructions);
+                ir_generate_statement(generator, *statement.value.if_statement.else_block, instructions, function_idx);
 
                 IRInstruction end_label_instruction = {
                     .type = IRInstructionType_Label,
@@ -150,7 +154,7 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
             break;
         }
         case StatementType_BLOCK: {
-            ir_generate_block(generator, *statement.value.block, instructions);
+            ir_generate_block(generator, *statement.value.block, instructions, function_idx);
             break;
         }
         case StatementType_WHILE: {
@@ -189,7 +193,7 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
 
             vecptr_push(instructions, jump_break);
 
-            ir_generate_statement(generator, *statement.value.loop_statement.body, instructions);
+            ir_generate_statement(generator, *statement.value.loop_statement.body, instructions, function_idx);
 
             IRInstruction jump_continue = {
                 .type = IRInstructionType_Jump,
@@ -239,7 +243,7 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
 
             vecptr_push(instructions, top_label_instruction);
 
-            ir_generate_statement(generator, *statement.value.loop_statement.body, instructions);
+            ir_generate_statement(generator, *statement.value.loop_statement.body, instructions, function_idx);
 
             IRInstruction continue_label_instruction = {
                 .type = IRInstructionType_Label,
@@ -366,7 +370,7 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
                 vecptr_push(instructions, jump_break);
             }
 
-            ir_generate_statement(generator, *statement.value.for_statement.body, instructions);
+            ir_generate_statement(generator, *statement.value.for_statement.body, instructions, function_idx);
 
             IRInstruction continue_label_instruction = {
                 .type = IRInstructionType_Label,
@@ -413,7 +417,7 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
 
             IRVal condition = ir_generate_expression(generator, cond_expr, instructions);
 
-            SwitchCases switch_cases = generator->switch_cases;
+            SwitchCases switch_cases = generator->switch_cases[function_idx];
 
             for (int i = 0; i < switch_cases.length; i++) {
                 struct SwitchCase switch_case = switch_cases.data[i];
@@ -464,7 +468,7 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
                 }
             }
 
-            ir_generate_statement(generator, *statement.value.loop_statement.body, instructions);
+            ir_generate_statement(generator, *statement.value.loop_statement.body, instructions, function_idx);
 
             IRInstruction break_label_instruction = {
                 .type = IRInstructionType_Label,

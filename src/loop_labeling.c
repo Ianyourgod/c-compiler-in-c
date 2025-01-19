@@ -3,9 +3,13 @@
 #include <stdlib.h>
 
 struct ProgramAndStructs label_loops(ParserProgram program) {
-    struct FuncAndStructs function = label_loops_function(*program.function);
-    *program.function = function.function;
-    return (struct ProgramAndStructs){program, function.switch_cases};
+    SwitchCases* switch_cases = malloc(sizeof(SwitchCases) * program.length);
+    for (int i = 0; i < program.length; i++) {
+        struct FuncAndStructs result = label_loops_function(program.data[i]);
+        program.data[i] = label_loops_function(program.data[i]).function;
+        switch_cases[i] = result.switch_cases;
+    }
+    return (struct ProgramAndStructs){program, switch_cases, program.length};
 }
 
 struct FuncAndStructs label_loops_function(ParserFunctionDefinition function) {

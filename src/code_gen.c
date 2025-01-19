@@ -4,10 +4,12 @@
 #include "easy_stuff.h"
 
 CodegenProgram codegen_generate_program(IRProgram program) {
-    CodegenProgram codegen_program = {NULL};
+    CodegenProgram codegen_program = {NULL, 0, 0};
 
-    codegen_program.function = malloc_type(CodegenFunctionDefinition);
-    *codegen_program.function = codegen_generate_function(*program.function);
+    for (int i = 0; i < program.length; i++) {
+        CodegenFunctionDefinition function = codegen_generate_function(program.data[i]);
+        vec_push(codegen_program, function);
+    }
 
     return codegen_program;
 }
