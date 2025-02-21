@@ -105,6 +105,7 @@ CodegenFunctionDefinition fixup_function(struct FuncAndOffset function) {
     new_function.identifier = function.function.identifier;
     CodegenFunctionBody new_body = {NULL, 0, 0};
     new_function.body = new_body;
+    new_function.global = function.function.global;
 
     CodegenInstruction allocate_stack = {
         .type = CodegenInstructionType_ALLOCATE_STACK,

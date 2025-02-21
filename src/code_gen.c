@@ -18,6 +18,7 @@ CodegenFunctionDefinition codegen_generate_function(IRFunctionDefinition functio
     CodegenFunctionDefinition codegen_function = {NULL};
 
     codegen_function.identifier = function.identifier;
+    codegen_function.global = function.global;
     codegen_function.body = (CodegenFunctionBody) { NULL, 0, 0 };
 
     // loop over the instructionss

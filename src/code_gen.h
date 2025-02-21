@@ -111,6 +111,7 @@ typedef VEC(CodegenInstruction) CodegenFunctionBody;
 
 typedef struct CodegenFunctionDefinition {
     char* identifier;
+    int global;
     CodegenFunctionBody body;
 } CodegenFunctionDefinition;
 

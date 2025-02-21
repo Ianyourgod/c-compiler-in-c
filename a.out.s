@@ -18,6 +18,7 @@ pout r5
 cmp r14 r15
 jc < ...render_exit_code_1 
 hlt
+.global
 main:
 push r15
 add r14 r0 r15
@@ -60,6 +61,7 @@ ldi r2 0
 add r15 r0 r14
 pop r15
 ret
+.global
 other_function:
 push r15
 add r14 r0 r15

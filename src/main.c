@@ -168,27 +168,11 @@ int main(int argc, char** argv) {
     sprintf(assembly_output_file, "%s.s", args.output);
 
     // clear output file
-    FILE* file = fopen(assembly_output_file, "w");
-    if (file == NULL) {
-        fprintf(stderr, "Could not open file: %s\n", assembly_output_file);
-        exit(1);
-    }
-
-    fclose(file);
-
-    FILE* output_file = fopen(assembly_output_file, "a");
+    FILE* output_file = fopen(assembly_output_file, "w");
     if (output_file == NULL) {
         fprintf(stderr, "Could not open file: %s\n", assembly_output_file);
         exit(1);
     }
-
-     // the code we need to add:
-    /*
-    we need to setup the stack
-    we need to call main
-    we need to get the exit code
-    we need to render it
-    */
 
    char* adding =
 "ldi r14 65534\n"

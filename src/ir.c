@@ -25,6 +25,7 @@ IRProgram ir_generate_program(IRGenerator* generator, ParserProgram program) {
 IRFunctionDefinition ir_generate_function(IRGenerator* generator, ParserFunctionDefinition function, int function_idx) {
     IRFunctionDefinition ir_function = {0};
     ir_function.identifier = function.identifier;
+    ir_function.global = 1;
     ir_function.body = (IRFunctionBody) { NULL, 0, 0 };
 
     ir_generate_block(generator, function.body, &ir_function.body, function_idx);

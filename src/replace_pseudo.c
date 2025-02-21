@@ -20,6 +20,7 @@ struct FuncAndOffset replace_pseudo_function(CodegenFunctionDefinition function)
     struct FuncAndOffset new_function = {{0}, 0};
 
     new_function.function.identifier = function.identifier;
+    new_function.function.global = function.global;
     CodegenFunctionBody new_body = {NULL, 0, 0};
 
     PseudoInfoMap map = { -2, 0, 0, NULL };
