@@ -113,7 +113,8 @@ void pseudomap_insert(PseudoInfoMap* map, char* name) {
         map->map_start = realloc(map->map_start, sizeof(*map->map_start) * map->max_length);
     }
 
-    PseudoInfo entry = { .name = name, .idx = map->current_idx };
+    int idx = map->current_idx;
+    PseudoInfo entry = { .name = name, .idx = idx };
     map->current_idx -= 2;
 
     map->map_start[map->pseudo_count++] = entry;

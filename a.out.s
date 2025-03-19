@@ -22,15 +22,16 @@ hlt
 other_function:
 push r15
 add r14 r0 r15
-ldi r10 4
+ldi r10 6
 sub r14 r10 r14
+str r15 r3 -2
 ldi r10 5
-str r15 r10 -2
-lod r15 r10 -2
-ldi r11 1
-add r10 r11 r12
-str r15 r12 -4
-lod r15 r2 -4
+str r15 r10 -4
+lod r15 r10 -4
+lod r15 r11 -2
+mul r10 r11 r12
+str r15 r12 -6
+lod r15 r2 -6
 add r15 r0 r14
 pop r15
 ret
@@ -44,6 +45,7 @@ push r15
 add r14 r0 r15
 ldi r10 6
 sub r14 r10 r14
+ldi r3 5
 call other_function
 str r15 r2 -2
 lod r15 r10 -2

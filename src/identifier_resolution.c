@@ -110,23 +110,34 @@ FunctionDefinition resolve_identifiers_function(FunctionDefinition function, Ide
     char* old_name = function.identifier;
     char* new_name = true ? function.identifier : idents_mangle_name(function.identifier, table->length);
     if (!identifier_table_can_redefine(table, old_name)) {
-        fprintf(stderr, "Cannot redefine variable %s\n", old_name);
+        fprintf(stderr, "Variable %s already defined in same scope\n", old_name);
         exit(1);
     }
     identifier_table_insert(table, old_name, new_name, 1);
     function.identifier = new_name;
 
     FunctionDefinition new_function = (FunctionDefinition){
-        strdup(function.identifier),
-        function.params,
-        function.has_body,
-        {
+        .identifier = function.identifier,
+        .params = function.params,
+        .has_body = function.has_body,
+        .body = {
             parser_block_new(),
             .is_some=true
         }
     };
 
     IdentifierTable new_table = ident_table_clone(table);
+
+    for (int param=0;param<new_function.params.length;param++) {
+        char* old_name = new_function.params.data[param];
+        char* new_name = idents_mangle_name(new_function.params.data[param], new_table.length);
+        if (!identifier_table_can_redefine(&new_table, old_name)) {
+            fprintf(stderr, "Variable %s already defined in same scope\n", old_name);
+            exit(1);
+        }
+        identifier_table_insert(&new_table, old_name, new_name, 1);
+        new_function.params.data[param] = new_name;
+    }
 
     if (new_function.body.is_some)
         new_function.body.data = resolve_identifiers_block(function.body.data, &new_table);
@@ -135,14 +146,15 @@ FunctionDefinition resolve_identifiers_function(FunctionDefinition function, Ide
 }
 
 ParserBlock resolve_identifiers_block(ParserBlock block, IdentifierTable* table) {
+    IdentifierTable new_table = ident_table_clone(table);
     for (int i = 0; i < block.length; i++) {
         BlockItem item = block.statements[i];
         switch (item.type) {
             case BlockItem_DECLARATION:
-                block.statements[i].value.declaration = resolve_identifiers_declaration(item.value.declaration, table);
+                block.statements[i].value.declaration = resolve_identifiers_declaration(item.value.declaration, &new_table);
                 break;
             case BlockItem_STATEMENT:
-                block.statements[i].value.statement = resolve_identifiers_statement(item.value.statement, table);
+                block.statements[i].value.statement = resolve_identifiers_statement(item.value.statement, &new_table);
                 break;
         }
     }
@@ -246,7 +258,7 @@ VariableDeclaration resolve_identifiers_variable_declaration(VariableDeclaration
     char* old_name = declaration.identifier;
     char* new_name = idents_mangle_name(declaration.identifier, table->length);
     if (!identifier_table_can_redefine(table, old_name)) {
-        fprintf(stderr, "Cannot redefine variable %s\n", old_name);
+        fprintf(stderr, "Variable %s already defined in same scope\n", old_name);
         exit(1);
     }
     identifier_table_insert(table, old_name, new_name, 1);

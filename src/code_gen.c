@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "code_gen.h"
 #include "easy_stuff.h"
@@ -20,6 +21,54 @@ CodegenFunctionDefinition codegen_generate_function(IRFunctionDefinition functio
     codegen_function.identifier = function.identifier;
     codegen_function.global = function.global;
     codegen_function.body = (CodegenFunctionBody) { NULL, 0, 0 };
+
+    // move params to vars
+    // r3, r4, r5, r6, r7, r8, r9
+    for (int reg_a=0;reg_a<7&&reg_a<function.params.length;reg_a++) {
+        CodegenInstruction mov = {
+            .type = CodegenInstructionType_MOV,
+            .value = {
+                .two_op = {
+                    .source = {
+                        .type = CodegenOperandType_REGISTER,
+                        .value = {
+                            .num = reg_a+3
+                        }
+                    },
+                    .destination = {
+                        .type = CodegenOperandType_PSEUDO,
+                        .value = {
+                            .pseudo = function.params.data[reg_a]
+                        }
+                    }
+                }
+            }
+        };
+        vec_push(codegen_function.body, mov);
+    }
+
+    for (int stack_a=7;stack_a<function.params.length;stack_a++) {
+        CodegenInstruction mov = {
+            .type = CodegenInstructionType_MOV,
+            .value = {
+                .two_op = {
+                    .source = {
+                        .type = CodegenOperandType_STACK,
+                        .value = {
+                            .num = (stack_a-6)*2
+                        }
+                    },
+                    .destination = {
+                        .type = CodegenOperandType_PSEUDO,
+                        .value = {
+                            .pseudo = function.params.data[stack_a]
+                        }
+                    }
+                }
+            }
+        };
+        vec_push(codegen_function.body, mov);
+    }
 
     // loop over the instructionss
     for (int i = 0; i < function.body.length; i++) {

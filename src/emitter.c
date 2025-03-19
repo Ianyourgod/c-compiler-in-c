@@ -40,10 +40,8 @@ char* emit_program(CodegenProgram program) {
 char* emit_function_definition(CodegenFunctionDefinition function) {
     char* output = (char*)malloc(strlen(function.identifier) + (function.global ? 35 : 27));
     if (function.global) {
-        printf("global\n");
         sprintf(output, ".global\n%s:\npush r15\nadd r14 r0 r15\n", function.identifier);
     } else {
-        printf("not global\n");
         sprintf(output, "%s:\npush r15\nadd r14 r0 r15\n", function.identifier);
     }
 

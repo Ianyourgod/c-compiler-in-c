@@ -667,8 +667,8 @@ Expression parser_parse_lower_factor(Parser* parser) {
                 Expression initial_expr = parser_parse_expression(parser, 0);
                 expression.value.function_call.args.data = malloc_type(Expression);
                 *expression.value.function_call.args.data = initial_expr;
-                expression.value.function_call.args.capacity = 0;
-                expression.value.function_call.args.length = 0;
+                expression.value.function_call.args.capacity = 1;
+                expression.value.function_call.args.length = 1;
 
                 while (parser_peek(parser).type != TokenType_RPAREN) {
                     parser_expect(parser, TokenType_COMMA);

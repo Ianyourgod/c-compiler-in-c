@@ -35,6 +35,17 @@ IROptionalFN ir_generate_function(IRGenerator* generator, FunctionDefinition fun
     if (!function.body.is_some) {
         return (IROptionalFN){.is_some=0};
     }
+    
+    if (function.params.length > 0) {
+        ir_function.params.length = function.params.length;
+        ir_function.params.data = malloc_n_type(char*, function.params.length);
+        for (int i=0;i<function.params.length;i++) {
+            ir_function.params.data[i] = function.params.data[i];
+        }
+    } else {
+        ir_function.params.length = 0;
+        ir_function.params.data = NULL;
+    }
 
     ir_generate_block(generator, function.body.data, &ir_function.body, function_idx);
 

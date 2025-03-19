@@ -116,7 +116,6 @@ char* compile(char* input) {
 
 void assemble(char* path, char* output) {
     (void)output; // unused
-    printf("%s\n", path);
 
     printf("pre assemble\n");
     //char* command = (char*)malloc(strlen(path) + 17 + strlen(output));

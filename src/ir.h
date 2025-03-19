@@ -106,6 +106,10 @@ typedef VEC(IRInstruction) IRFunctionBody;
 typedef struct IRFunctionDefinition {
     char* identifier;
     int global;
+    struct {
+        char** data;
+        int length;
+    } params;
     IRFunctionBody body;
 } IRFunctionDefinition;
 
