@@ -1,5 +1,5 @@
 #include "loop_labeling.h"
-#include "easy_stuff.h"
+#include "../easy_stuff.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -83,9 +83,9 @@ Statement label_loops_statement(Statement statement, LoopLabelContext* context) 
                 if (!context->stack.data[i].is_loop) {
                     statement.value.case_statement.label = context->switch_cases.length;
                     struct SwitchCase case_data = {
-                        statement.value.case_statement.expr,
-                        context->stack.data[i].label,
-                        context->switch_cases.length};
+                        .expr = statement.value.case_statement.expr,
+                        .case_label = context->stack.data[i].label,
+                        .switch_label = context->switch_cases.length};
                     vec_push(context->switch_cases, case_data);
                     break;
                 }
@@ -106,7 +106,7 @@ Statement label_loops_statement(Statement statement, LoopLabelContext* context) 
             break;
         }
         case StatementType_BLOCK: {
-            *statement.value.block = label_loops_block(*statement.value.block, context);
+            statement.value.block = label_loops_block(statement.value.block, context);
             break;
         }
         case StatementType_IF: {

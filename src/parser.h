@@ -115,6 +115,7 @@ typedef union TypeData {
     struct {
         int length;
     } fn;
+    int none;
 } TypeData;
 
 typedef enum TypeEnum {
@@ -134,7 +135,6 @@ typedef struct FunctionDefinition {
         int length;
         int capacity;
     } params;
-    int has_body;
     BlockOption body;
 } FunctionDefinition;
 
@@ -180,19 +180,19 @@ struct ForInit {
 };
 
 typedef union StatementValue {
-    struct Expression* expr;
+    struct Expression expr;
     struct {
-        struct Expression* condition;
+        struct Expression condition;
         struct Statement* then_block;
         struct Statement* else_block; // optional, can be NULL
     } if_statement;
     struct {
-        struct Expression* condition;
+        struct Expression condition;
         struct Statement* body;
         int label;
     } loop_statement;
     struct {
-        struct Expression* expr;
+        struct Expression expr;
         int label;
     } case_statement;
     struct {
@@ -202,7 +202,7 @@ typedef union StatementValue {
         struct Statement* body;
         int label;
     } for_statement;
-    struct ParserBlock* block;
+    struct ParserBlock block;
     int loop_label;
 } StatementValue;
 

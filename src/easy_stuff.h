@@ -2,8 +2,11 @@
 #define VEC_H
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #define Option(T) struct {T data;int is_some;}
+
+#define panic(...) {fprintf(stderr, __VA_ARGS__);exit(1);}
 
 #define false 0
 #define true 1

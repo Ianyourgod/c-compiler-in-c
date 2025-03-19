@@ -3,7 +3,7 @@
 
 #include "parser.h"
 #include "easy_stuff.h"
-#include "loop_labeling.h"
+#include "semantic_analysis/loop_labeling.h"
 
 typedef struct IRProgram {
     struct IRFunctionDefinition* data;

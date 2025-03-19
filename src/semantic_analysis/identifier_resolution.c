@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "easy_stuff.h"
+#include "../easy_stuff.h"
 #include "identifier_resolution.h"
 
 IdentifierTable identifier_table_new() {
@@ -48,8 +48,7 @@ char* identifier_table_resolve(IdentifierTable* table, char* old_name) {
     }
 
     // error
-    fprintf(stderr, "Could not resolve old name: %s\n", old_name);
-    exit(1);
+    panic("Could not resolve old name: %s\n", old_name);
 }
 
 int identifier_table_can_redefine(IdentifierTable* table, char* old_name) {
@@ -74,8 +73,7 @@ char* identifier_table_resolve_newname(IdentifierTable* table, char* new_name) {
     }
 
     // error
-    fprintf(stderr, "Could not resolve new name: %s\n", new_name);
-    exit(1);
+    panic("Could not resolve new name: %s\n", new_name);
 }
 
 IdentifierTable ident_table_clone(IdentifierTable* table) {
@@ -99,19 +97,18 @@ ParserProgram resolve_identifiers(ParserProgram program) {
 
     for (int i = 0; i < program.length; i++) {
         FunctionDefinition function = program.data[i];
-        FunctionDefinition new_function = resolve_identifiers_function(function, &table);
+        FunctionDefinition new_function = resolve_identifiers_function(function, &table, true);
         vec_push(new_program, new_function);
     }
 
     return new_program;
 }
 
-FunctionDefinition resolve_identifiers_function(FunctionDefinition function, IdentifierTable* table) {
+FunctionDefinition resolve_identifiers_function(FunctionDefinition function, IdentifierTable* table, int global) {
     char* old_name = function.identifier;
     char* new_name = true ? function.identifier : idents_mangle_name(function.identifier, table->length);
     if (!identifier_table_can_redefine(table, old_name)) {
-        fprintf(stderr, "Variable %s already defined in same scope\n", old_name);
-        exit(1);
+        panic("Variable %s already defined in same scope\n", old_name);
     }
     identifier_table_insert(table, old_name, new_name, 1);
     function.identifier = new_name;
@@ -119,10 +116,9 @@ FunctionDefinition resolve_identifiers_function(FunctionDefinition function, Ide
     FunctionDefinition new_function = (FunctionDefinition){
         .identifier = function.identifier,
         .params = function.params,
-        .has_body = function.has_body,
         .body = {
             parser_block_new(),
-            .is_some=true
+            .is_some=function.body.is_some
         }
     };
 
@@ -132,11 +128,14 @@ FunctionDefinition resolve_identifiers_function(FunctionDefinition function, Ide
         char* old_name = new_function.params.data[param];
         char* new_name = idents_mangle_name(new_function.params.data[param], new_table.length);
         if (!identifier_table_can_redefine(&new_table, old_name)) {
-            fprintf(stderr, "Variable %s already defined in same scope\n", old_name);
-            exit(1);
+            panic("Variable %s already defined in same scope\n", old_name);
         }
         identifier_table_insert(&new_table, old_name, new_name, 1);
         new_function.params.data[param] = new_name;
+    }
+
+    if (new_function.body.is_some && !global) {
+        panic("Erm it kindaaa needs to be global");
     }
 
     if (new_function.body.is_some)
@@ -166,18 +165,18 @@ Statement resolve_identifiers_statement(Statement statement, IdentifierTable* ta
     switch (statement.type) {
         case StatementType_RETURN:
         case StatementType_EXPRESSION: {
-            Expression expr = resolve_identifiers_expression(*statement.value.expr, table);
-            *statement.value.expr = expr;
+            Expression expr = resolve_identifiers_expression(statement.value.expr, table);
+            statement.value.expr = expr;
             break;
         }
         case StatementType_CASE: {
-            Expression expr = resolve_identifiers_expression(*statement.value.case_statement.expr, table);
-            *statement.value.case_statement.expr = expr;
+            Expression expr = resolve_identifiers_expression(statement.value.case_statement.expr, table);
+            statement.value.case_statement.expr = expr;
             break;
         }
         case StatementType_IF: {
-            Expression condition = resolve_identifiers_expression(*statement.value.if_statement.condition, table);
-            *statement.value.if_statement.condition = condition;
+            Expression condition = resolve_identifiers_expression(statement.value.if_statement.condition, table);
+            statement.value.if_statement.condition = condition;
 
             Statement then_block = resolve_identifiers_statement(*statement.value.if_statement.then_block, table);
             *statement.value.if_statement.then_block = then_block;
@@ -191,8 +190,8 @@ Statement resolve_identifiers_statement(Statement statement, IdentifierTable* ta
         case StatementType_WHILE:
         case StatementType_SWITCH:
         case StatementType_DO_WHILE: {
-            Expression condition = resolve_identifiers_expression(*statement.value.loop_statement.condition, table);
-            *statement.value.loop_statement.condition = condition;
+            Expression condition = resolve_identifiers_expression(statement.value.loop_statement.condition, table);
+            statement.value.loop_statement.condition = condition;
 
             Statement body = resolve_identifiers_statement(*statement.value.loop_statement.body, table);
             *statement.value.loop_statement.body = body;
@@ -225,8 +224,8 @@ Statement resolve_identifiers_statement(Statement statement, IdentifierTable* ta
         }
         case StatementType_BLOCK: {
             IdentifierTable new_table = ident_table_clone(table);
-            ParserBlock block = resolve_identifiers_block(*statement.value.block, &new_table);
-            *statement.value.block = block;
+            ParserBlock block = resolve_identifiers_block(statement.value.block, &new_table);
+            statement.value.block = block;
             break;
         }
 
@@ -246,7 +245,7 @@ Declaration resolve_identifiers_declaration(Declaration declaration, IdentifierT
             break;
         }
         case DeclarationType_Function: {
-            FunctionDefinition f_decl = resolve_identifiers_function(declaration.value.function, table);
+            FunctionDefinition f_decl = resolve_identifiers_function(declaration.value.function, table, false);
             declaration.value.function = f_decl;
             break;
         }
@@ -258,8 +257,7 @@ VariableDeclaration resolve_identifiers_variable_declaration(VariableDeclaration
     char* old_name = declaration.identifier;
     char* new_name = idents_mangle_name(declaration.identifier, table->length);
     if (!identifier_table_can_redefine(table, old_name)) {
-        fprintf(stderr, "Variable %s already defined in same scope\n", old_name);
-        exit(1);
+        panic("Variable %s already defined in same scope\n", old_name);
     }
     identifier_table_insert(table, old_name, new_name, 1);
     declaration.identifier = new_name;
@@ -291,10 +289,8 @@ Expression resolve_identifiers_expression(Expression expression, IdentifierTable
             break;
         }
         case ExpressionType_ASSIGN: {
-            char* old_name = expression.value.assign.lvalue->value.identifier;
-            char* new_name = identifier_table_resolve(table, old_name);
-            expression.value.assign.lvalue->value.identifier = strdup(new_name);
-
+            Expression lvalue = resolve_identifiers_expression(*expression.value.assign.lvalue, table);
+            *expression.value.assign.lvalue = lvalue;
             Expression rvalue = resolve_identifiers_expression(*expression.value.assign.rvalue, table);
             *expression.value.assign.rvalue = rvalue;
             break;

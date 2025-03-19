@@ -4,8 +4,9 @@
 
 #include "lexer.h"
 #include "parser.h"
-#include "identifier_resolution.h"
-#include "loop_labeling.h"
+#include "semantic_analysis/identifier_resolution.h"
+#include "semantic_analysis/loop_labeling.h"
+#include "semantic_analysis/type_checking.h"
 #include "ir.h"
 #include "code_gen.h"
 #include "replace_pseudo.h"
@@ -93,6 +94,9 @@ char* compile(char* input) {
     printf("pre loop label\n");
     struct ProgramAndStructs loop_label_ret = label_loops(ident_res_program);
     ParserProgram loop_label_program = loop_label_ret.program;
+
+    printf("pre typecheck\n");
+    typecheck_program(&loop_label_program); // TODO! rewrite to return a program, so that we can annotate the ast with type data
 
     printf("pre ir\n");
     IRGenerator generator = ir_generator_new(loop_label_ret.switch_cases_vec);

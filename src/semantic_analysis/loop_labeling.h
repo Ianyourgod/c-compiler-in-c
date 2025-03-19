@@ -1,8 +1,8 @@
 #ifndef LOOP_LABELING_H
 #define LOOP_LABELING_H
 
-#include "parser.h"
-#include "easy_stuff.h"
+#include "../parser.h"
+#include "../easy_stuff.h"
 
 struct LabelStackData {
     int label;
@@ -16,7 +16,7 @@ typedef struct LabelStack {
 } LabelStack;
 
 struct SwitchCase {
-    struct Expression* expr;
+    struct Expression expr;
     int switch_label;
     int case_label;
 };

@@ -110,7 +110,7 @@ void ir_generate_variable_declaration(IRGenerator* generator, VariableDeclaratio
 void ir_generate_statement(IRGenerator* generator, Statement statement, IRFunctionBody* instructions, int function_idx) {
     switch (statement.type) {
         case StatementType_RETURN: {
-            IRVal val = ir_generate_expression(generator, *statement.value.expr, instructions);
+            IRVal val = ir_generate_expression(generator, statement.value.expr, instructions);
             IRInstruction instruction = {
                 .type = IRInstructionType_Return,
                 .value = {
@@ -121,11 +121,11 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
             break;
         }
         case StatementType_EXPRESSION: {
-            ir_generate_expression(generator, *statement.value.expr, instructions);
+            ir_generate_expression(generator, statement.value.expr, instructions);
             break;
         }
         case StatementType_IF: {
-            IRVal condition = ir_generate_expression(generator, *statement.value.if_statement.condition, instructions);
+            IRVal condition = ir_generate_expression(generator, statement.value.if_statement.condition, instructions);
 
             char* else_label = ir_make_temp_name(generator);
             char* end_label = ir_make_temp_name(generator);
@@ -186,7 +186,7 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
             break;
         }
         case StatementType_BLOCK: {
-            ir_generate_block(generator, *statement.value.block, instructions, function_idx);
+            ir_generate_block(generator, statement.value.block, instructions, function_idx);
             break;
         }
         case StatementType_WHILE: {
@@ -211,7 +211,7 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
 
             vecptr_push(instructions, continue_label_instruction);
 
-            IRVal condition = ir_generate_expression(generator, *statement.value.loop_statement.condition, instructions);
+            IRVal condition = ir_generate_expression(generator, statement.value.loop_statement.condition, instructions);
 
             IRInstruction jump_break = {
                 .type = IRInstructionType_JumpIfZero,
@@ -286,7 +286,7 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
 
             vecptr_push(instructions, continue_label_instruction);
 
-            IRVal condition = ir_generate_expression(generator, *statement.value.loop_statement.condition, instructions);
+            IRVal condition = ir_generate_expression(generator, statement.value.loop_statement.condition, instructions);
 
             IRInstruction jump_top = {
                 .type = IRInstructionType_JumpIfNotZero,
@@ -444,8 +444,7 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
                 exit(1);
             }
 
-            // memalign cond_expr using posix_memalign
-            Expression cond_expr = *statement.value.loop_statement.condition;
+            Expression cond_expr = statement.value.loop_statement.condition;
 
             IRVal condition = ir_generate_expression(generator, cond_expr, instructions);
 
@@ -457,9 +456,9 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
                     IRVal cmping = ir_make_temp(generator);
 
                     IRVal const_expr;
-                    switch (switch_case.expr->type) {
+                    switch (switch_case.expr.type) {
                         case ExpressionType_INT:
-                            const_expr = (IRVal){.type = IRValType_Int, .value = {switch_case.expr->value.integer}};
+                            const_expr = (IRVal){.type = IRValType_Int, .value = {switch_case.expr.value.integer}};
                             break;
                         default:
                             fprintf(stderr, "Only integer constants are supported in switch cases\n");

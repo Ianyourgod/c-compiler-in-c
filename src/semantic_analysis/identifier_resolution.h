@@ -1,7 +1,7 @@
 #ifndef IDENTIFIER_RESOLUTION_H
 #define IDENTIFIER_RESOLUTION_H
 
-#include "parser.h"
+#include "../parser.h"
 
 typedef struct IdentifierTableEntry {
     char* old_name;
@@ -22,7 +22,7 @@ char* identifier_table_resolve_newname(IdentifierTable* table, char* new_name);
 void identifier_table_free(IdentifierTable table);
 
 ParserProgram resolve_identifiers(ParserProgram program);
-FunctionDefinition resolve_identifiers_function(FunctionDefinition function, IdentifierTable* table);
+FunctionDefinition resolve_identifiers_function(FunctionDefinition function, IdentifierTable* table, int global);
 ParserBlock resolve_identifiers_block(ParserBlock block, IdentifierTable* table);
 Statement resolve_identifiers_statement(Statement statement, IdentifierTable* table);
 Declaration resolve_identifiers_declaration(Declaration declaration, IdentifierTable* table);
