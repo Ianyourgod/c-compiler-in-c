@@ -34,7 +34,7 @@ typedef struct LoopLabelContext {
 } LoopLabelContext;
 
 struct FuncAndStructs {
-    ParserFunctionDefinition function;
+    FunctionDefinition function;
     SwitchCases switch_cases;
 };
 
@@ -45,7 +45,7 @@ struct ProgramAndStructs {
 };
 
 struct ProgramAndStructs label_loops(ParserProgram program);
-struct FuncAndStructs label_loops_function(ParserFunctionDefinition function);
+struct FuncAndStructs label_loops_function(FunctionDefinition function);
 ParserBlock label_loops_block(ParserBlock block, LoopLabelContext* context);
 Statement label_loops_statement(Statement statement, LoopLabelContext* context);
 Declaration label_loops_declaration(Declaration declaration, LoopLabelContext* context);

@@ -202,6 +202,26 @@ char* emit_instruction(CodegenInstruction instruction) {
 
             return output;
         }
+        case CodegenInstructionType_DEALLOCATE_STACK: {
+            char* output = malloc(26 + quick_log10(instruction.value.immediate));
+            sprintf(output, "ldi r10 %d\nadd r14 r10 r14\n", instruction.value.immediate);
+
+            return output;
+        }
+        case CodegenInstructionType_CALL: {
+            char* output = malloc(7 + quick_log10(strlen(instruction.value.str)));
+            sprintf(output, "call %s\n", instruction.value.str);
+
+            return output;
+        }
+        case CodegenInstructionType_PUSH: {
+            char* op = emit_operand(instruction.value.single);
+
+            char* output = malloc(7 + strlen(op));
+            sprintf(output, "push %s\n", op);
+
+            return output;
+        }
         case CodegenInstructionType_LOD: {
             char* address = emit_operand(instruction.value.mem.address);
             char* reg = emit_operand(instruction.value.mem.reg);
@@ -242,8 +262,8 @@ char* emit_instruction(CodegenInstruction instruction) {
             return output;
         }
         case CodegenInstructionType_JUMP: {
-            char* output = malloc(6 + strlen(instruction.value.label));
-            sprintf(output, "jmp %s\n", instruction.value.label);
+            char* output = malloc(6 + strlen(instruction.value.str));
+            sprintf(output, "jmp %s\n", instruction.value.str);
 
             return output;
         }
@@ -281,15 +301,15 @@ char* emit_instruction(CodegenInstruction instruction) {
             return output;
         }
         case CodegenInstructionType_LABEL: {
-            char* output = malloc(3 + strlen(instruction.value.label));
-            sprintf(output, "%s:\n", instruction.value.label);
+            char* output = malloc(3 + strlen(instruction.value.str));
+            sprintf(output, "%s:\n", instruction.value.str);
 
             return output;
         }
-        default:
+        /*default:
             // error
             fprintf(stderr, "Unexpected instruction type in emit stage\n");
-            exit(1);
+            exit(1);*/
     }
 
     fprintf(stderr, "Unexpected instruction type in emit stage\n");

@@ -22,10 +22,11 @@ char* identifier_table_resolve_newname(IdentifierTable* table, char* new_name);
 void identifier_table_free(IdentifierTable table);
 
 ParserProgram resolve_identifiers(ParserProgram program);
-ParserFunctionDefinition resolve_identifiers_function(ParserFunctionDefinition function, IdentifierTable* table);
+FunctionDefinition resolve_identifiers_function(FunctionDefinition function, IdentifierTable* table);
 ParserBlock resolve_identifiers_block(ParserBlock block, IdentifierTable* table);
 Statement resolve_identifiers_statement(Statement statement, IdentifierTable* table);
 Declaration resolve_identifiers_declaration(Declaration declaration, IdentifierTable* table);
+VariableDeclaration resolve_identifiers_variable_declaration(VariableDeclaration declaration, IdentifierTable* table);
 Expression resolve_identifiers_expression(Expression expression, IdentifierTable* table);
 char* idents_mangle_name(char* name, int id);
 

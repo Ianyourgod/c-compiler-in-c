@@ -110,7 +110,7 @@ CodegenFunctionDefinition fixup_function(struct FuncAndOffset function) {
     CodegenInstruction allocate_stack = {
         .type = CodegenInstructionType_ALLOCATE_STACK,
         .value = {
-            .immediate = -function.offset,
+            .immediate = function.offset,
         },
     };
 
@@ -416,12 +416,14 @@ void fixup_instruction(CodegenInstruction instruction, CodegenFunctionBody* body
             vecptr_push(body, cmp);
             break;
         }
-
+        case CodegenInstructionType_PUSH:
+        case CodegenInstructionType_CALL:
         case CodegenInstructionType_RET:
         case CodegenInstructionType_LABEL:
         case CodegenInstructionType_JUMP:
         case CodegenInstructionType_JUMP_COND:
         case CodegenInstructionType_ALLOCATE_STACK:
+        case CodegenInstructionType_DEALLOCATE_STACK:
             vecptr_push(body, instruction);
             break;
 

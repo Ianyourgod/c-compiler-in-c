@@ -61,7 +61,7 @@ int identifier_table_can_redefine(IdentifierTable* table, char* old_name) {
         }
     }
 
-    return 1;
+    return true;
 }
 
 char* identifier_table_resolve_newname(IdentifierTable* table, char* new_name) {
@@ -98,20 +98,38 @@ ParserProgram resolve_identifiers(ParserProgram program) {
     ParserProgram new_program = {NULL};
 
     for (int i = 0; i < program.length; i++) {
-        ParserFunctionDefinition function = program.data[i];
-        ParserFunctionDefinition new_function = resolve_identifiers_function(function, &table);
+        FunctionDefinition function = program.data[i];
+        FunctionDefinition new_function = resolve_identifiers_function(function, &table);
         vec_push(new_program, new_function);
     }
 
     return new_program;
 }
 
-ParserFunctionDefinition resolve_identifiers_function(ParserFunctionDefinition function, IdentifierTable* table) {
-    ParserFunctionDefinition new_function = {strdup(function.identifier), parser_block_new()};
+FunctionDefinition resolve_identifiers_function(FunctionDefinition function, IdentifierTable* table) {
+    char* old_name = function.identifier;
+    char* new_name = true ? function.identifier : idents_mangle_name(function.identifier, table->length);
+    if (!identifier_table_can_redefine(table, old_name)) {
+        fprintf(stderr, "Cannot redefine variable %s\n", old_name);
+        exit(1);
+    }
+    identifier_table_insert(table, old_name, new_name, 1);
+    function.identifier = new_name;
+
+    FunctionDefinition new_function = (FunctionDefinition){
+        strdup(function.identifier),
+        function.params,
+        function.has_body,
+        {
+            parser_block_new(),
+            .is_some=true
+        }
+    };
 
     IdentifierTable new_table = ident_table_clone(table);
 
-    new_function.body = resolve_identifiers_block(function.body, &new_table);
+    if (new_function.body.is_some)
+        new_function.body.data = resolve_identifiers_block(function.body.data, &new_table);
 
     return new_function;
 }
@@ -171,22 +189,22 @@ Statement resolve_identifiers_statement(Statement statement, IdentifierTable* ta
         case StatementType_FOR: {
             IdentifierTable new_table = ident_table_clone(table);
             if (statement.value.for_statement.init.type == ForInit_DECLARATION) {
-                statement.value.for_statement.init.value.declaration = resolve_identifiers_declaration(statement.value.for_statement.init.value.declaration, &new_table);
-            } else if (statement.value.for_statement.init.value.expression != NULL) {
-                Expression expr = resolve_identifiers_expression(*statement.value.for_statement.init.value.expression, &new_table);
-                *statement.value.for_statement.init.value.expression = expr;
+                statement.value.for_statement.init.value.declaration = resolve_identifiers_variable_declaration(statement.value.for_statement.init.value.declaration, &new_table);
+            } else if (statement.value.for_statement.init.value.expression.is_some) {
+                Expression expr = resolve_identifiers_expression(statement.value.for_statement.init.value.expression.data, &new_table);
+                statement.value.for_statement.init.value.expression.data = expr;
             }
 
             
-            if (statement.value.for_statement.condition != NULL) {
-                Expression condition = resolve_identifiers_expression(*statement.value.for_statement.condition, &new_table);
+            if (statement.value.for_statement.condition.is_some) {
+                Expression condition = resolve_identifiers_expression(statement.value.for_statement.condition.data, &new_table);
                 
-                *statement.value.for_statement.condition = condition;
+                statement.value.for_statement.condition.data = condition;
             }
 
-            if (statement.value.for_statement.post != NULL) {
-                Expression post = resolve_identifiers_expression(*statement.value.for_statement.post, &new_table);
-                *statement.value.for_statement.post = post;
+            if (statement.value.for_statement.post.is_some) {
+                Expression post = resolve_identifiers_expression(statement.value.for_statement.post.data, &new_table);
+                statement.value.for_statement.post.data = post;
             }
 
             Statement body = resolve_identifiers_statement(*statement.value.for_statement.body, &new_table);
@@ -209,6 +227,22 @@ Statement resolve_identifiers_statement(Statement statement, IdentifierTable* ta
 }
 
 Declaration resolve_identifiers_declaration(Declaration declaration, IdentifierTable* table) {
+    switch (declaration.type) {
+        case DeclarationType_Variable: {
+            VariableDeclaration v_decl = resolve_identifiers_variable_declaration(declaration.value.variable, table);
+            declaration.value.variable = v_decl;
+            break;
+        }
+        case DeclarationType_Function: {
+            FunctionDefinition f_decl = resolve_identifiers_function(declaration.value.function, table);
+            declaration.value.function = f_decl;
+            break;
+        }
+    }
+    return declaration;
+}
+
+VariableDeclaration resolve_identifiers_variable_declaration(VariableDeclaration declaration, IdentifierTable* table) {
     char* old_name = declaration.identifier;
     char* new_name = idents_mangle_name(declaration.identifier, table->length);
     if (!identifier_table_can_redefine(table, old_name)) {
@@ -218,9 +252,8 @@ Declaration resolve_identifiers_declaration(Declaration declaration, IdentifierT
     identifier_table_insert(table, old_name, new_name, 1);
     declaration.identifier = new_name;
 
-    if (declaration.expression != NULL) {
-        Expression expr = resolve_identifiers_expression(*declaration.expression, table);
-        *declaration.expression = expr;
+    if (declaration.expression.is_some) {
+        declaration.expression.data = resolve_identifiers_expression(declaration.expression.data, table);
     }
 
     return declaration;
@@ -233,6 +266,16 @@ Expression resolve_identifiers_expression(Expression expression, IdentifierTable
             char* new_name = identifier_table_resolve(table, old_name);
             //free(expression.value.identifier);
             expression.value.identifier = strdup(new_name);
+            break;
+        }
+        case ExpressionType_FUNCTION_CALL: {
+            char* old_name = expression.value.function_call.name;
+            char* new_name = identifier_table_resolve(table, old_name);
+            expression.value.function_call.name = strdup(new_name);
+
+            for (int i=0;i<expression.value.function_call.args.length;i++) {
+                expression.value.function_call.args.data[i] = resolve_identifiers_expression(expression.value.function_call.args.data[i], table);
+            }
             break;
         }
         case ExpressionType_ASSIGN: {

@@ -1,9 +1,10 @@
 #include "loop_labeling.h"
+#include "easy_stuff.h"
 #include <stdio.h>
 #include <stdlib.h>
 
 struct ProgramAndStructs label_loops(ParserProgram program) {
-    SwitchCases* switch_cases = malloc(sizeof(SwitchCases) * program.length);
+    SwitchCases* switch_cases = malloc_n_type(SwitchCases, program.length);
     for (int i = 0; i < program.length; i++) {
         struct FuncAndStructs result = label_loops_function(program.data[i]);
         program.data[i] = label_loops_function(program.data[i]).function;
@@ -12,11 +13,12 @@ struct ProgramAndStructs label_loops(ParserProgram program) {
     return (struct ProgramAndStructs){program, switch_cases, program.length};
 }
 
-struct FuncAndStructs label_loops_function(ParserFunctionDefinition function) {
+struct FuncAndStructs label_loops_function(FunctionDefinition function) {
     LabelStack stack = {0};
     SwitchCases switch_cases = {0};
     LoopLabelContext context = {stack, switch_cases, 0};
-    function.body = label_loops_block(function.body, &context);
+    if (function.body.is_some)
+        function.body.data = label_loops_block(function.body.data, &context);
     return (struct FuncAndStructs){function, context.switch_cases};
 }
 ParserBlock label_loops_block(ParserBlock block, LoopLabelContext* context) {

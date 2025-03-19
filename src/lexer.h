@@ -46,6 +46,7 @@ typedef enum TokenType {
     TokenType_RIGHT_SHIFT_ASSIGN,
     TokenType_QUESTION_MARK,
     TokenType_COLON,
+    TokenType_COMMA,
 } TokenType;
 
 typedef enum KeywordType {

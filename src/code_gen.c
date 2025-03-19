@@ -53,13 +53,13 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
                 },
             };
 
-            vec_push(*instructions, mov_instruction);
+            vecptr_push(instructions, mov_instruction);
 
             CodegenInstruction ret_instruction = {
                 .type = CodegenInstructionType_RET,
             };
 
-            vec_push(*instructions, ret_instruction);
+            vecptr_push(instructions, ret_instruction);
 
             break;
         }
@@ -81,7 +81,7 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
                     },
                 };
 
-                vec_push(*instructions, not_instr);
+                vecptr_push(instructions, not_instr);
 
                 break;
             }
@@ -98,7 +98,7 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
 
             };
 
-            vec_push(*instructions, unary_instruction);
+            vecptr_push(instructions, unary_instruction);
 
             break;
         }
@@ -175,7 +175,7 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
                 },
             };
 
-            vec_push(*instructions, binary_instruction);
+            vecptr_push(instructions, binary_instruction);
 
             break;
         }
@@ -193,7 +193,7 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
                 },
             };
 
-            vec_push(*instructions, mov_instruction);
+            vecptr_push(instructions, mov_instruction);
 
             break;
         }
@@ -201,11 +201,11 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
             CodegenInstruction jmp_instruction = {
                 .type = CodegenInstructionType_JUMP,
                 .value = {
-                    .label = instruction.value.label,
+                    .str = instruction.value.label,
                 },
             };
 
-            vec_push(*instructions, jmp_instruction);
+            vecptr_push(instructions, jmp_instruction);
 
             break;
         } 
@@ -225,7 +225,7 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
                 },
             };
 
-            vec_push(*instructions, cmp_instruction);
+            vecptr_push(instructions, cmp_instruction);
 
             CodegenInstruction jc_instruction = {
                 .type = CodegenInstructionType_JUMP_COND,
@@ -237,7 +237,7 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
                 },
             };
 
-            vec_push(*instructions, jc_instruction);
+            vecptr_push(instructions, jc_instruction);
 
             break;
         }
@@ -245,13 +245,112 @@ void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody
             CodegenInstruction label_instruction = {
                 .type = CodegenInstructionType_LABEL,
                 .value = {
-                    .label = instruction.value.label,
+                    .str = instruction.value.label,
                 },
             };
 
-            vec_push(*instructions, label_instruction);
+            vecptr_push(instructions, label_instruction);
 
             break;
+        }
+        case IRInstructionType_Call: {
+            // r3, r4, r5, r6, r7, r8, r9
+            int args_len = instruction.value.call.args.length;
+            int stack_padding = 0;
+            if (args_len > 7 && args_len % 2 == 0) { // if there is an odd amount of stack args
+                stack_padding = 8;
+                CodegenInstruction alloc = {
+                    .type = CodegenInstructionType_ALLOCATE_STACK,
+                    .value = {
+                        .immediate = stack_padding
+                    }
+                };
+                vecptr_push(instructions, alloc);
+            }
+            for (int reg=0;reg<7 && reg<args_len;reg++) {
+                CodegenOperand arg = codegen_convert_val(instruction.value.call.args.data[reg], instructions);
+                CodegenInstruction mov = {
+                    .type = CodegenInstructionType_MOV,
+                    .value = {
+                        .two_op = {
+                            .source = arg,
+                            .destination = {
+                                .type = CodegenOperandType_REGISTER,
+                                .value = {
+                                    .num = reg+3
+                                }
+                            }
+                        }
+                    }
+                };
+                vecptr_push(instructions, mov);
+            }
+
+            CodegenOperand r2 = {
+                .type = CodegenOperandType_REGISTER,
+                .value = {
+                    .num = 2
+                }
+            };
+            for (int arg_n=args_len-1;arg_n>=7;arg_n++) {
+                CodegenOperand arg = codegen_convert_val(instruction.value.call.args.data[arg_n], instructions);
+                CodegenOperand pushing = arg;
+                if (arg.type != CodegenOperandType_IMMEDIATE && arg.type != CodegenOperandType_REGISTER) {
+                    CodegenInstruction mov = {
+                        .type = CodegenInstructionType_MOV,
+                        .value = {
+                            .two_op = {
+                                .source = arg,
+                                .destination = r2,
+                            }
+                        }
+                    };
+                    vecptr_push(instructions, mov);
+                    pushing = r2;
+                }
+                CodegenInstruction push = {
+                    .type = CodegenInstructionType_PUSH,
+                    .value = {
+                        .single = pushing
+                    }
+                };
+                vecptr_push(instructions, push);
+            }
+
+            CodegenInstruction call = {
+                .type = CodegenInstructionType_CALL,
+                .value = {
+                    .call = {
+                        .name = instruction.value.call.name
+                    }
+                }
+            };
+            vecptr_push(instructions, call);
+
+            int stack_len = args_len - 7 > 0 ? args_len - 7 : 0;
+
+            int bytes_to_remove = 8 * stack_len + stack_padding;
+            if (bytes_to_remove > 0) {
+                CodegenInstruction de_al = {
+                    .type = CodegenInstructionType_DEALLOCATE_STACK,
+                    .value = {
+                        .immediate = bytes_to_remove
+                    }
+                };
+                vecptr_push(instructions, de_al);
+            }
+
+            CodegenOperand dst = codegen_convert_val(instruction.value.call.dst, instructions);
+            CodegenInstruction mov = {
+                .type = CodegenInstructionType_MOV,
+                .value = {
+                    .two_op = {
+                        .source = r2,
+                        .destination = dst,
+                    }
+                }
+            };
+            vecptr_push(instructions, mov);
         }
         //default:
         //    break;

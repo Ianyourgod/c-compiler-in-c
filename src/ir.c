@@ -15,20 +15,28 @@ IRProgram ir_generate_program(IRGenerator* generator, ParserProgram program) {
     IRProgram ir_program = {0};
 
     for (int i = 0; i < program.length; i++) {
-        IRFunctionDefinition function = ir_generate_function(generator, program.data[i], i);
+        IROptionalFN fn = ir_generate_function(generator, program.data[i], i);
+        if (!fn.is_some) {
+            continue;
+        }
+        IRFunctionDefinition function = fn.data;
         vec_push(ir_program, function);
     }
 
     return ir_program;
 }
 
-IRFunctionDefinition ir_generate_function(IRGenerator* generator, ParserFunctionDefinition function, int function_idx) {
+IROptionalFN ir_generate_function(IRGenerator* generator, FunctionDefinition function, int function_idx) {
     IRFunctionDefinition ir_function = {0};
     ir_function.identifier = function.identifier;
     ir_function.global = 1;
     ir_function.body = (IRFunctionBody) { NULL, 0, 0 };
 
-    ir_generate_block(generator, function.body, &ir_function.body, function_idx);
+    if (!function.body.is_some) {
+        return (IROptionalFN){.is_some=0};
+    }
+
+    ir_generate_block(generator, function.body.data, &ir_function.body, function_idx);
 
     IRInstruction final_return = {
         .type = IRInstructionType_Return,
@@ -39,7 +47,9 @@ IRFunctionDefinition ir_generate_function(IRGenerator* generator, ParserFunction
 
     vec_push(ir_function.body, final_return);
 
-    return ir_function;
+    IROptionalFN final = {ir_function, true};
+
+    return final;
 }
 
 void ir_generate_block(IRGenerator* generator, ParserBlock block, IRFunctionBody* instructions, int function_idx) {
@@ -57,11 +67,21 @@ void ir_generate_block(IRGenerator* generator, ParserBlock block, IRFunctionBody
 }
 
 void ir_generate_declaration(IRGenerator* generator, Declaration declaration, IRFunctionBody* instructions) {
-    if (declaration.expression == NULL) {
+    if (declaration.type == DeclarationType_Function) {
         return;
     }
 
-    IRVal val = ir_generate_expression(generator, *declaration.expression, instructions);
+    VariableDeclaration v_declaration = declaration.value.variable;
+    
+    ir_generate_variable_declaration(generator, v_declaration, instructions);
+}
+
+void ir_generate_variable_declaration(IRGenerator* generator, VariableDeclaration declaration, IRFunctionBody* instructions) {
+    if (!declaration.expression.is_some) {
+        return;
+    }
+
+    IRVal val = ir_generate_expression(generator, declaration.expression.data, instructions);
 
     IRInstruction instruction = {
         .type = IRInstructionType_Copy,
@@ -319,11 +339,11 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
         case StatementType_FOR: {
             switch (statement.value.for_statement.init.type) {
                 case ForInit_DECLARATION:
-                    ir_generate_declaration(generator, statement.value.for_statement.init.value.declaration, instructions);
+                    ir_generate_variable_declaration(generator, statement.value.for_statement.init.value.declaration, instructions);
                     break;
                 case ForInit_EXPRESSION:
-                    if (statement.value.for_statement.init.value.expression != NULL) {
-                        ir_generate_expression(generator, *statement.value.for_statement.init.value.expression, instructions);
+                    if (statement.value.for_statement.init.value.expression.is_some) {
+                        ir_generate_expression(generator, statement.value.for_statement.init.value.expression.data, instructions);
                     }
                     break;
             }
@@ -355,8 +375,8 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
 
             vecptr_push(instructions, start_label_instruction);
 
-            if (statement.value.for_statement.condition != NULL) {
-                IRVal condition = ir_generate_expression(generator, *statement.value.for_statement.condition, instructions);
+            if (statement.value.for_statement.condition.is_some) {
+                IRVal condition = ir_generate_expression(generator, statement.value.for_statement.condition.data, instructions);
 
                 IRInstruction jump_break = {
                     .type = IRInstructionType_JumpIfZero,
@@ -382,8 +402,8 @@ void ir_generate_statement(IRGenerator* generator, Statement statement, IRFuncti
 
             vecptr_push(instructions, continue_label_instruction);
 
-            if (statement.value.for_statement.post != NULL) {
-                ir_generate_expression(generator, *statement.value.for_statement.post, instructions);
+            if (statement.value.for_statement.post.is_some) {
+                ir_generate_expression(generator, statement.value.for_statement.post.data, instructions);
             }
 
             IRInstruction jump_start = {
@@ -930,6 +950,29 @@ IRVal ir_generate_expression(IRGenerator* generator, Expression expression, IRFu
             };
 
             vecptr_push(instructions, end_label_instruction);
+
+            return dst;
+        }
+        case ExpressionType_FUNCTION_CALL: {
+            IRVal dst = ir_make_temp(generator);
+            IRInstruction call = {
+                .type = IRInstructionType_Call,
+                .value = {
+                    .call = {
+                        .name = expression.value.function_call.name,
+                        .dst = dst,
+                        .args = {
+                            .capacity = expression.value.function_call.args.length,
+                            .data = malloc_n_type(IRVal, expression.value.function_call.args.length),
+                            .length = expression.value.function_call.args.length,
+                        }
+                    }
+                }
+            };
+            for (int a=0;a<expression.value.function_call.args.length;a++) {
+                call.value.call.args.data[a] = ir_generate_expression(generator, expression.value.function_call.args.data[a], instructions);
+            }
+            vecptr_push(instructions, call);
 
             return dst;
         }

@@ -3,6 +3,11 @@
 
 #include <stdlib.h>
 
+#define Option(T) struct {T data;int is_some;}
+
+#define false 0
+#define true 1
+
 #define VEC(T) \
     struct { \
         T* data; \

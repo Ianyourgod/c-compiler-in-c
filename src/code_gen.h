@@ -35,6 +35,8 @@ typedef enum CodegenInstructionType {
     CodegenInstructionType_LDI,
     CodegenInstructionType_UNARY,
     CodegenInstructionType_ALLOCATE_STACK,
+    CodegenInstructionType_DEALLOCATE_STACK,
+    CodegenInstructionType_PUSH,
     CodegenInstructionType_RET,
     CodegenInstructionType_LOD,
     CodegenInstructionType_STR,
@@ -43,6 +45,7 @@ typedef enum CodegenInstructionType {
     CodegenInstructionType_JUMP,
     CodegenInstructionType_JUMP_COND,
     CodegenInstructionType_LABEL,
+    CodegenInstructionType_CALL,
 } CodegenInstructionType;
 
 typedef enum CodegenUnaryOp {
@@ -91,7 +94,7 @@ typedef union CodegenInstructionValue {
         CodegenOperand right;
         CodegenOperand dst;
     } binary;
-    char* label;
+    char* str;
     struct {
         CodegenCondCode cond;
         char* label;
@@ -100,6 +103,10 @@ typedef union CodegenInstructionValue {
         CodegenOperand left;
         CodegenOperand right;
     } cmp; // functionally the same as two_op, but semantically different
+    struct {
+        char* name;
+    } call;
+    CodegenOperand single;
 } CodegenInstructionValue;
 
 typedef struct CodegenInstruction {

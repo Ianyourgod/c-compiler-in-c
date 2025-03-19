@@ -5,8 +5,10 @@
 #include "parser.h"
 #include "easy_stuff.h"
 
-Parser parser_new(Token* tokens) {
-    Parser parser = {tokens, 0};
+#define panic(...) {fprintf(stderr, __VA_ARGS__);exit(1);}
+
+Parser parser_new(Token* tokens, int token_count) {
+    Parser parser = {tokens, 0, token_count};
     return parser;
 }
 
@@ -14,39 +16,16 @@ ParserProgram parser_parse(Parser* parser) {
     ParserProgram program = {0};
 
     while (parser->tokens[parser->index].type != TokenType_EOF) {
-        if (program.length == program.capacity) {
-            program.capacity = program.capacity == 0 ? 1 : program.capacity * 2;
-            program.data = realloc(program.data, sizeof(ParserFunctionDefinition) * program.capacity);
+        Declaration decl = parser_parse_declaration(parser);
+
+        if (decl.type != DeclarationType_Function) {
+            panic("static variables more like bad-ic variables OOOOHHHH");
         }
 
-        program.data[program.length] = parser_parse_function(parser);
-        program.length++;
+        vec_push(program, decl.value.function);
     }
 
     return program;
-}
-
-ParserFunctionDefinition parser_parse_function(Parser* parser) {
-    ParserFunctionDefinition function = {0};
-
-    parser_expect_token(parser, (Token){TokenType_KEYWORD, .value.keyword = Keyword_INT});
-
-    Token identifier = parser_next_token(parser);
-
-    if (identifier.type != TokenType_IDENTIFIER) {
-        fprintf(stderr, "Expected identifier, got %d\n", identifier.type);
-        exit(1);
-    }
-
-    function.identifier = identifier.value.identifier;
-
-    parser_expect(parser, TokenType_LPAREN);
-    parser_expect_token(parser, (Token){.type = TokenType_KEYWORD, .value.keyword = Keyword_VOID});
-    parser_expect(parser, TokenType_RPAREN);
-
-    function.body = parser_parse_block(parser);
-
-    return function;
 }
 
 ParserBlock parser_parse_block(Parser* parser) {
@@ -92,23 +71,88 @@ Declaration parser_parse_declaration(Parser* parser) {
     Token identifier = parser_next_token(parser);
 
     if (identifier.type != TokenType_IDENTIFIER) {
-        fprintf(stderr, "Expected identifier, got %d\n", identifier.type);
-        exit(1);
+        panic("Expected identifier, got %d\n", identifier.type);
     }
 
-    declaration.identifier = identifier.value.identifier;
+    if (parser_peek(parser).type == TokenType_LPAREN) {
+        declaration.type = DeclarationType_Function;
 
-    if (parser_peek(parser).type == TokenType_ASSIGN) {
+        declaration.value.function.identifier = identifier.value.identifier;
+
         parser_next_token(parser);
-        declaration.expression = malloc_type(Expression);
-        *declaration.expression = parser_parse_expression(parser, 0);
-    } else {
-        declaration.expression = NULL;
-    }
+        // get the arguments
+        Token token = parser_peek(parser);
+        Token forward_peek = parser_peek_by(parser, 1);
 
-    parser_expect(parser, TokenType_SEMICOLON);
+        if (token.type == TokenType_RPAREN) {
+            // empty var list
+            declaration.value.function.params.capacity = 0;
+            declaration.value.function.params.data = NULL;
+            declaration.value.function.params.length = 0;
+        } else if (token.type == TokenType_KEYWORD && token.value.keyword == Keyword_VOID &&
+            forward_peek.type == TokenType_RPAREN) {
+            // void var list
+            parser_next_token(parser);
+            declaration.value.function.params.capacity = 0;
+            declaration.value.function.params.data = NULL;
+            declaration.value.function.params.length = 0;
+        } else {
+            // actual list
+            declaration.value.function.params.data = malloc_type(char*);
+            declaration.value.function.params.capacity = 1;
+            declaration.value.function.params.length = 1;
+
+            char* initial_param = parser_parse_param(parser);
+            *declaration.value.function.params.data = initial_param;
+
+            while (parser_peek(parser).type != TokenType_RPAREN) {
+                parser_expect(parser, TokenType_COMMA);
+                char* param = parser_parse_param(parser);
+                vec_push(declaration.value.function.params, param);
+            }
+        }
+        parser_expect(parser, TokenType_RPAREN);
+
+        Token peek = parser_peek(parser);
+
+        if (peek.type == TokenType_SEMICOLON) {
+            declaration.value.function.body.is_some = false;
+        } else {
+            declaration.value.function.body.data = parser_parse_block(parser);
+            declaration.value.function.body.is_some = true;
+        }
+    } else {
+        // variable
+        declaration.type = DeclarationType_Variable;
+        declaration.value.variable.identifier = identifier.value.identifier;
+        
+        Token peek = parser_peek(parser);
+
+        parser_next_token(parser);
+        if (peek.type == TokenType_SEMICOLON) {
+            declaration.value.variable.expression.is_some = false;
+        } else if (peek.type == TokenType_ASSIGN) {
+            declaration.value.variable.expression.data = parser_parse_expression(parser, 0);
+            declaration.value.variable.expression.is_some = true;
+            parser_expect(parser, TokenType_SEMICOLON);
+        } else {
+            panic("Unexpected token instead of ; or =, %d", peek.type);
+        }
+    }
 
     return declaration;
+}
+
+char* parser_parse_param(Parser* parser) {
+    parser_expect_token(parser, (Token){.type = TokenType_KEYWORD, .value.keyword = Keyword_INT});
+
+    Token next = parser_next_token(parser);
+    if (next.type != TokenType_IDENTIFIER) {
+        panic("ermmm parameters need an identifier around here buddy....");
+    }
+    char* identifier = next.value.identifier;
+
+    return identifier;
 }
 
 Statement parser_parse_statement(Parser* parser) {
@@ -176,30 +220,35 @@ Statement parser_parse_statement(Parser* parser) {
                     parser_expect(parser, TokenType_LPAREN);
                     if (parser_peek(parser).type == TokenType_KEYWORD && parser_peek(parser).value.keyword == Keyword_INT) {
                         statement.value.for_statement.init.type = ForInit_DECLARATION;
-                        statement.value.for_statement.init.value.declaration = parser_parse_declaration(parser);
+                        Declaration decl = parser_parse_declaration(parser);
+                        if (decl.type != DeclarationType_Variable) {
+                            panic("thats no good! these things take variables!");
+                        }
+
+                        statement.value.for_statement.init.value.declaration = decl.value.variable;
                     } else if (parser_peek(parser).type == TokenType_SEMICOLON) {
                         statement.value.for_statement.init.type = ForInit_EXPRESSION;
-                        statement.value.for_statement.init.value.expression = NULL;
+                        statement.value.for_statement.init.value.expression.is_some = false;
                         parser_expect(parser, TokenType_SEMICOLON);
                     } else {
                         statement.value.for_statement.init.type = ForInit_EXPRESSION;
-                        statement.value.for_statement.init.value.expression = malloc_type(Expression);
-                        *statement.value.for_statement.init.value.expression = parser_parse_expression(parser, 0);
+                        statement.value.for_statement.init.value.expression.is_some = true;
+                        statement.value.for_statement.init.value.expression.data = parser_parse_expression(parser, 0);
                         parser_expect(parser, TokenType_SEMICOLON);
                     }
 
                     if (parser_peek(parser).type != TokenType_SEMICOLON) {
-                        statement.value.for_statement.condition = malloc_type(Expression);
-                        *statement.value.for_statement.condition = parser_parse_expression(parser, 0);
+                        statement.value.for_statement.condition.is_some = true;
+                        statement.value.for_statement.condition.data = parser_parse_expression(parser, 0);
                     } else {
-                        statement.value.for_statement.condition = NULL;
+                        statement.value.for_statement.condition.is_some = false;
                     }
                     parser_expect(parser, TokenType_SEMICOLON);
                     if (parser_peek(parser).type != TokenType_RPAREN) {
-                        statement.value.for_statement.post = malloc_type(Expression);
-                        *statement.value.for_statement.post = parser_parse_expression(parser, 0);
+                        statement.value.for_statement.post.is_some = true;
+                        statement.value.for_statement.post.data = parser_parse_expression(parser, 0);
                     } else {
-                        statement.value.for_statement.post = NULL;
+                        statement.value.for_statement.post.is_some = false;
                     }
                     parser_expect(parser, TokenType_RPAREN);
                     statement.value.for_statement.body = malloc_type(Statement);
@@ -238,8 +287,7 @@ Statement parser_parse_statement(Parser* parser) {
                     break;
                 }
                 default: {
-                    fprintf(stderr, "Unexpected keyword %d\n", token.value.keyword);
-                    exit(1);
+                    panic("Unexpected keyword %d\n", token.value.keyword);
                 }
             }
             break;
@@ -368,8 +416,7 @@ enum ExpressionBinaryType get_binop(TokenType next_token) {
             type = ExpressionBinaryType_GREATER_EQUAL;
             break;
         default:
-            fprintf(stderr, "Unexpected token for binop %d\n", next_token);
-            exit(1);
+            panic("Unexpected token for binop %d\n", next_token);
     }
     return type;
 }
@@ -520,8 +567,7 @@ Expression parser_parse_factor(Parser* parser) {
                 case TokenType_INCREMENT: op = ExpressionUnaryType_POST_INCREMENT;break;
                 case TokenType_DECREMENT: op = ExpressionUnaryType_POST_DECREMENT;break;
                 default:
-                    fprintf(stderr, "erm what the flibma\n");
-                    exit(1);
+                    panic("erm what the flibma\n");
             }
 
             Expression new_expr = {
@@ -580,8 +626,7 @@ Expression parser_parse_lower_factor(Parser* parser) {
                     type = ExpressionUnaryType_COMPLEMENT;
                     break;
                 default:
-                    fprintf(stderr, "Unexpected token for unary %d\n", token.type);
-                    exit(1);
+                    panic("Unexpected token for unary %d\n", token.type);
             }
 
             struct ExpressionUnary unary = {
@@ -600,13 +645,43 @@ Expression parser_parse_lower_factor(Parser* parser) {
             parser_expect(parser, TokenType_RPAREN);
             break;
         case TokenType_IDENTIFIER: {
-            expression.type = ExpressionType_VAR;
-            expression.value.identifier = token.value.identifier;
+            if (parser_peek(parser).type != TokenType_LPAREN) {
+                expression.type = ExpressionType_VAR;
+                expression.value.identifier = token.value.identifier;
+                break;
+            }
+
+            // function
+
+            expression.type = ExpressionType_FUNCTION_CALL;
+            expression.value.function_call.name = token.value.identifier;
+
+            parser_next_token(parser);
+            Token peek = parser_peek(parser);
+
+            if (peek.type == TokenType_RPAREN) {
+                expression.value.function_call.args.capacity = 0;
+                expression.value.function_call.args.length = 0;
+                expression.value.function_call.args.data = NULL;
+            } else {
+                Expression initial_expr = parser_parse_expression(parser, 0);
+                expression.value.function_call.args.data = malloc_type(Expression);
+                *expression.value.function_call.args.data = initial_expr;
+                expression.value.function_call.args.capacity = 0;
+                expression.value.function_call.args.length = 0;
+
+                while (parser_peek(parser).type != TokenType_RPAREN) {
+                    parser_expect(parser, TokenType_COMMA);
+                    Expression next = parser_parse_expression(parser, 0);
+                    vec_push(expression.value.function_call.args, next);
+                }
+            }
+            parser_next_token(parser);
+
             break;
         }
         default:
-            fprintf(stderr, "Unexpected token for factor %d\n", token.type);
-            exit(1);
+            panic("Unexpected token for factor %d\n", token.type);
     }
 
     return expression;
@@ -660,10 +735,6 @@ void free_program(ParserProgram program) {
     }
     free(program.data);
 }
-void free_function_definition(ParserFunctionDefinition function) {
-    free(function.identifier);
-    free_block(function.body);
-}
 void free_block(ParserBlock block) {
     for (int i = 0; i < block.length; i++) {
         free_block_item(block.statements[i]);
@@ -681,10 +752,30 @@ void free_block_item(BlockItem item) {
     }
 }
 void free_declaration(Declaration declaration) {
-    free(declaration.identifier);
-    free_expression(*declaration.expression);
-    free(declaration.expression);
+    switch (declaration.type) {
+        case DeclarationType_Variable: {
+            free_variable_declaration(declaration.value.variable);
+            break;
+        }
+        case DeclarationType_Function: {
+            free_function_definition(declaration.value.function);
+            break;
+        }
+    }
 }
+void free_function_definition(FunctionDefinition declaration) {
+    //free(declaration.identifier); // avoid double frees if im stupid
+    if (declaration.body.is_some)
+        free_block(declaration.body.data);
+    free(declaration.params.data);
+}
+
+void free_variable_declaration(VariableDeclaration declaration) {
+    //free(declaration.identifier); // avoid double frees if im stupid
+    if (declaration.expression.is_some)
+        free_expression(declaration.expression.data);
+}
+
 void free_statement(Statement statement) {
     switch (statement.type) {
         case StatementType_RETURN:
@@ -710,12 +801,17 @@ void free_statement(Statement statement) {
             break;
         case StatementType_FOR:
             if (statement.value.for_statement.init.type == ForInit_DECLARATION) {
-                free_declaration(statement.value.for_statement.init.value.declaration);
-            } else if (statement.value.for_statement.init.value.expression != NULL) {
-                free_expression(*statement.value.for_statement.init.value.expression);
+                free_variable_declaration(statement.value.for_statement.init.value.declaration);
+            } else if (statement.value.for_statement.init.value.expression.is_some) {
+                free_expression(statement.value.for_statement.init.value.expression.data);
+            }
+            if (statement.value.for_statement.condition.is_some) {
+                free_expression(statement.value.for_statement.condition.data);
+            }
+            if (statement.value.for_statement.post.is_some) {
+                free_expression(statement.value.for_statement.post.data);
             }
 
-            free_expression(*statement.value.for_statement.condition);
             free_statement(*statement.value.for_statement.body);
             break;
         case StatementType_SWITCH:
@@ -732,29 +828,33 @@ void free_statement(Statement statement) {
 }
 void free_expression(Expression expr) {
     switch (expr.type) {
-        case ExpressionType_UNARY:
+        case ExpressionType_UNARY: {
             free_expression(*expr.value.unary.expression);
             free(expr.value.unary.expression);
             break;
-        case ExpressionType_BINARY:
+        }
+        case ExpressionType_BINARY: {
             free_expression(*expr.value.binary.left);
             free(expr.value.binary.left);
             free_expression(*expr.value.binary.right);
             free(expr.value.binary.right);
             break;
-        case ExpressionType_ASSIGN:
+        }
+        case ExpressionType_ASSIGN: {
             free_expression(*expr.value.assign.lvalue);
             free(expr.value.assign.lvalue);
             free_expression(*expr.value.assign.rvalue);
             free(expr.value.assign.rvalue);
             break;
-        case ExpressionType_OP_ASSIGN:
+        }
+        case ExpressionType_OP_ASSIGN: {
             free_expression(*expr.value.binary.left);
             free(expr.value.binary.left);
             free_expression(*expr.value.binary.right);
             free(expr.value.binary.right);
             break;
-        case ExpressionType_TERNARY:
+        }
+        case ExpressionType_TERNARY: {
             free_expression(*expr.value.ternary.condition);
             free(expr.value.ternary.condition);
             free_expression(*expr.value.ternary.then_expr);
@@ -762,6 +862,13 @@ void free_expression(Expression expr) {
             free_expression(*expr.value.ternary.else_expr);
             free(expr.value.ternary.else_expr);
             break;
+        }
+        case ExpressionType_FUNCTION_CALL: {
+            for (int i=0;i<expr.value.function_call.args.length;i++) {
+                free_expression(expr.value.function_call.args.data[i]);
+            }
+            free(expr.value.function_call.args.data);
+        }
         case ExpressionType_INT:
         case ExpressionType_VAR:
             break;
@@ -809,5 +916,15 @@ Token parser_next_token(Parser* parser) {
 } // get the current token and go to the next
 
 Token parser_peek(Parser* parser) {
+    if (parser->index >= parser->token_count) {
+        return (Token) {0};
+    }
     return parser->tokens[parser->index];
 } // get the current token without going to the next
+
+Token parser_peek_by(Parser* parser, int offset) {
+    if (parser->index+offset >= parser->token_count) {
+        return (Token) {0};
+    }
+    return parser->tokens[parser->index+offset];
+}

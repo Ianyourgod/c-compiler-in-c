@@ -45,6 +45,9 @@ Token lexer_next_token(Lexer* lexer) {
             case '~':
                 lexer->current++;
                 return token_new(TokenType_TILDE, (TokenValue){0});
+            case ',':
+                lexer->current++;
+                return token_new(TokenType_COMMA, (TokenValue){0});
             case '-':
                 lexer->current++;
                 switch (*lexer->current) {

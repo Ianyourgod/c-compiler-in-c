@@ -12,6 +12,8 @@
 #include "assembley_fixup.h"
 #include "emitter.h"
 
+// TODO! change this & assembler to have rip instead of r1, and remap r1 to actually machine-code side mean r2 (all the way up to r14/15)
+
 struct Args {
     int input_length;
     char** inputs;
@@ -35,7 +37,7 @@ struct Args parse_args(int argc, char** argv) {
         }
     }
 
-    args.inputs = (char**)malloc(sizeof(char*) * args.input_length);
+    args.inputs = malloc_n_type(char*, args.input_length);
 
     int inputs = 0;
 
@@ -66,7 +68,7 @@ char* compile(char* input) {
     printf("pre lex\n");
     Lexer lexer = lexer_new(input);
 
-    Token* tokens = (Token*)malloc(sizeof(Token));
+    Token* tokens = malloc_type(Token);
     int token_count = 0;
     int length = 1;
 
@@ -82,7 +84,7 @@ char* compile(char* input) {
     }
 
     printf("pre parse\n");
-    Parser parser = parser_new(tokens);
+    Parser parser = parser_new(tokens, token_count);
     ParserProgram program = parser_parse(&parser);
 
     printf("pre ident res\n");
@@ -113,9 +115,14 @@ char* compile(char* input) {
 }
 
 void assemble(char* path, char* output) {
+    (void)output; // unused
+    printf("%s\n", path);
+
     printf("pre assemble\n");
-    char* command = (char*)malloc(strlen(path) + 17 + strlen(output));
-    sprintf(command, "./assembler %s -o %s", path, output);
+    //char* command = (char*)malloc(strlen(path) + 17 + strlen(output));
+    //sprintf(command, "./assembler %s -o %s", path, output);
+    char* command = (char*)malloc(strlen(path) + 13);
+    sprintf(command, "./assembler %s", path);
     int out = system(command);
 
     if (out != 0) {
@@ -164,7 +171,7 @@ int quick_log10(int n) {
 int main(int argc, char** argv) {
     struct Args args = parse_args(argc, argv);
 
-    char* assembly_output_file = (char*)malloc(sizeof(char) * strlen(args.output) + 3);
+    char* assembly_output_file = malloc_n_type(char, strlen(args.output) + 3);
     sprintf(assembly_output_file, "%s.s", args.output);
 
     // clear output file

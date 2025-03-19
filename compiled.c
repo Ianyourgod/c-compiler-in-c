@@ -1,17 +1,9 @@
-int main(void) {
-    int a = 88;
-    switch (a) {
-        case 4:
-            return 3;
-            break;
-        case 88:
-            return 4;
-            break;
-    }
-    return 0;
-}
-
-int other_function(void) {
+int other_function() {
     int a = 5;
     return a + 1;
+}
+
+int main(void) {
+    int a = other_function();
+    return a*5;
 }

@@ -32,7 +32,7 @@ struct FuncAndOffset replace_pseudo_function(CodegenFunctionDefinition function)
 
     new_function.function.body = new_body;
 
-    new_function.offset = map.current_idx + 2;
+    new_function.offset = -(map.current_idx + 2);
 
     return new_function;
 }
@@ -65,6 +65,11 @@ CodegenInstruction replace_pseudo_instruction(CodegenInstruction instruction, Ps
             instruction.value.cmp.left = replace_pseudo_operand(instruction.value.cmp.left, map);
             instruction.value.cmp.right = replace_pseudo_operand(instruction.value.cmp.right, map);
             break;
+        case CodegenInstructionType_PUSH:
+            instruction.value.single = replace_pseudo_operand(instruction.value.single, map);
+            break;
+        case CodegenInstructionType_DEALLOCATE_STACK:
+        case CodegenInstructionType_CALL:
         case CodegenInstructionType_JUMP:
         case CodegenInstructionType_JUMP_COND:
         case CodegenInstructionType_LABEL:

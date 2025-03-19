@@ -20,6 +20,7 @@ typedef enum IRInstructionType {
     IRInstructionType_JumpIfZero,
     IRInstructionType_JumpIfNotZero,
     IRInstructionType_Label,
+    IRInstructionType_Call,
 } IRInstructionType;
 
 typedef enum IRValType {
@@ -84,6 +85,15 @@ typedef union IRInstructionValue {
         char* label;
     } jump_cond;
     char* label;
+    struct {
+        char* name;
+        struct {
+            IRVal* data;
+            int capacity;
+            int length;
+        } args;
+        IRVal dst;
+    } call;
 } IRInstructionValue;
 
 typedef struct IRInstruction {
@@ -106,11 +116,14 @@ typedef struct IRGenerator {
 
 } IRGenerator;
 
+typedef Option(IRFunctionDefinition) IROptionalFN;
+
 IRGenerator ir_generator_new(SwitchCases* switch_cases);
 IRProgram ir_generate_program(IRGenerator* generator, ParserProgram program);
-IRFunctionDefinition ir_generate_function(IRGenerator* generator, ParserFunctionDefinition function, int function_idx);
+IROptionalFN ir_generate_function(IRGenerator* generator, FunctionDefinition function, int function_idx);
 void ir_generate_block(IRGenerator* generator, ParserBlock block, IRFunctionBody* instructions, int function_idx);
 void ir_generate_declaration(IRGenerator* generator, Declaration declaration, IRFunctionBody* instructions);
+void ir_generate_variable_declaration(IRGenerator* generator, VariableDeclaration declaration, IRFunctionBody* instructions);
 void ir_generate_statement(IRGenerator* generator, Statement statement, IRFunctionBody* instructions, int function_idx);
 IRVal ir_generate_expression(IRGenerator* generator, Expression expression, IRFunctionBody* instructions);
 char* ir_make_temp_name(IRGenerator* generator);
