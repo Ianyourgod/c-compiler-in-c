@@ -8,9 +8,9 @@
 #include "semantic_analysis/loop_labeling.h"
 #include "semantic_analysis/type_checking.h"
 #include "ir.h"
-#include "code_gen.h"
-#include "replace_pseudo.h"
-#include "assembley_fixup.h"
+#include "assembly_gen/code_gen.h"
+#include "assembly_gen/replace_pseudo.h"
+#include "assembly_gen/assembley_fixup.h"
 #include "emitter.h"
 
 // TODO! change this & assembler to have rip instead of r1, and remap r1 to actually machine-code side mean r2 (all the way up to r14/15)
@@ -96,17 +96,17 @@ char* compile(char* input) {
     ParserProgram loop_label_program = loop_label_ret.program;
 
     printf("pre typecheck\n");
-    typecheck_program(&loop_label_program); // TODO! rewrite to return a program, so that we can annotate the ast with type data
+    TCSymbols symbols = typecheck_program(&loop_label_program); // TODO! rewrite to return a program, so that we can annotate the ast with type data
 
     printf("pre ir\n");
-    IRGenerator generator = ir_generator_new(loop_label_ret.switch_cases_vec);
+    IRGenerator generator = ir_generator_new(loop_label_ret.switch_cases_vec, &symbols);
     IRProgram ir_program = ir_generate_program(&generator, loop_label_program);
 
     printf("pre codegen\n");
     CodegenProgram codegen_program = codegen_generate_program(ir_program);
 
     printf("pre replace\n");
-    struct ReplaceResult replaced_pseudos = replace_pseudo(codegen_program);
+    struct ReplaceResult replaced_pseudos = replace_pseudo(codegen_program, &symbols);
 
     printf("pre fixup\n");
     CodegenProgram fixed = fixup_program(replaced_pseudos);

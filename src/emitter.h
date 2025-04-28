@@ -1,7 +1,7 @@
 #ifndef EMITTER_H
 #define EMITTER_H
 
-#include "code_gen.h"
+#include "assembly_gen/code_gen.h"
 
 char* emit_program(CodegenProgram program);
 char* emit_function_definition(CodegenFunctionDefinition function);

@@ -62,6 +62,8 @@ typedef enum KeywordType {
     Keyword_CONTINUE,
     Keyword_SWITCH,
     Keyword_CASE,
+    Keyword_STATIC,
+    Keyword_EXTERN,
 } KeywordType;
 
 typedef union TokenValue {
@@ -79,6 +81,12 @@ typedef struct Lexer {
     char* start;
     char* current;
 } Lexer;
+
+typedef struct TokenStream {
+    Token* data;
+    int capacity;
+    int length;
+} TokenStream;
 
 Lexer lexer_new(char* source);
 Token lexer_next_token(Lexer* lexer);

@@ -9,7 +9,7 @@ IdentifierTable identifier_table_new() {
     return (IdentifierTable){NULL, 0, 0};
 }
 
-int identifier_table_get_id(IdentifierTable* table, char* old_name) {
+int identifier_table_get_index(IdentifierTable* table, char* old_name) {
     for (int i = 0; i < table->length; i++) {
         IdentifierTableEntry entry = table->entries[i];
 
@@ -21,8 +21,8 @@ int identifier_table_get_id(IdentifierTable* table, char* old_name) {
     return -1;
 }
 
-void identifier_table_insert(IdentifierTable* table, char* old_name, char* new_name, int from_current) {
-    int resvd = identifier_table_get_id(table, old_name);
+void identifier_table_insert(IdentifierTable* table, char* old_name, char* new_name, int from_current,int linkage) {
+    int resvd = identifier_table_get_index(table, old_name);
 
     if (resvd >= 0) {
         table->entries[resvd].new_name = new_name;
@@ -35,7 +35,12 @@ void identifier_table_insert(IdentifierTable* table, char* old_name, char* new_n
         table->entries = realloc(table->entries, sizeof(*table->entries) * table->capacity);
     }
 
-    table->entries[table->length++] = (IdentifierTableEntry){old_name, new_name, from_current};
+    table->entries[table->length++] = (IdentifierTableEntry){
+        .old_name=old_name,
+        .new_name=new_name,
+        .from_current_scope=from_current,
+        .has_linkage=linkage
+    };
 }
 
 char* identifier_table_resolve(IdentifierTable* table, char* old_name) {
@@ -63,6 +68,14 @@ int identifier_table_can_redefine(IdentifierTable* table, char* old_name) {
     return true;
 }
 
+IdentifierTableEntry identifier_table_get(IdentifierTable* table, int index) {
+    if (index < 0 || index >= table->length) {
+        return (IdentifierTableEntry){.from_current_scope=0,.has_linkage=0,.new_name=NULL,.old_name=NULL};
+    }
+
+    return table->entries[index];
+}
+
 char* identifier_table_resolve_newname(IdentifierTable* table, char* new_name) {
     for (int i = 0; i < table->length; i++) {
         IdentifierTableEntry entry = table->entries[i];
@@ -81,7 +94,7 @@ IdentifierTable ident_table_clone(IdentifierTable* table) {
 
     for (int i = 0; i < table->length; i++) {
         IdentifierTableEntry entry = table->entries[i];
-        identifier_table_insert(&new_table, entry.old_name, entry.new_name, 0);
+        identifier_table_insert(&new_table, entry.old_name, entry.new_name, false, entry.has_linkage);
     }
 
     return new_table;
@@ -96,21 +109,43 @@ ParserProgram resolve_identifiers(ParserProgram program) {
     ParserProgram new_program = {NULL};
 
     for (int i = 0; i < program.length; i++) {
-        FunctionDefinition function = program.data[i];
-        FunctionDefinition new_function = resolve_identifiers_function(function, &table, true);
-        vec_push(new_program, new_function);
+        Declaration decl = program.data[i];
+        switch (decl.type) {
+            case DeclarationType_Function: {
+                FunctionDefinition function = decl.value.function;
+                FunctionDefinition new_function = resolve_identifiers_function(function, &table, true);
+                decl.value.function = new_function;
+                vec_push(new_program, decl);
+                break;
+            }
+            case DeclarationType_Variable: {
+                VariableDeclaration var = decl.value.variable;
+                VariableDeclaration new_var = resolve_file_scope_var(var, &table);
+                decl.value.variable = new_var;
+                vec_push(new_program, decl);
+                break;
+            }
+        }
     }
 
     return new_program;
 }
 
+VariableDeclaration resolve_file_scope_var(VariableDeclaration var, IdentifierTable* table) {
+    identifier_table_insert(table, var.identifier, var.identifier, true, true);
+    return var;
+}
+
 FunctionDefinition resolve_identifiers_function(FunctionDefinition function, IdentifierTable* table, int global) {
+    int has_linkage = function.storage_class != StorageClass_STATIC;
+
     char* old_name = function.identifier;
-    char* new_name = true ? function.identifier : idents_mangle_name(function.identifier, table->length);
+    char* new_name = has_linkage ? function.identifier : idents_mangle_name(function.identifier, table->length);
+
     if (!identifier_table_can_redefine(table, old_name)) {
         panic("Variable %s already defined in same scope\n", old_name);
     }
-    identifier_table_insert(table, old_name, new_name, 1);
+    identifier_table_insert(table, old_name, new_name, true, has_linkage);
     function.identifier = new_name;
 
     FunctionDefinition new_function = (FunctionDefinition){
@@ -130,12 +165,12 @@ FunctionDefinition resolve_identifiers_function(FunctionDefinition function, Ide
         if (!identifier_table_can_redefine(&new_table, old_name)) {
             panic("Variable %s already defined in same scope\n", old_name);
         }
-        identifier_table_insert(&new_table, old_name, new_name, 1);
+        identifier_table_insert(&new_table, old_name, new_name, true, has_linkage);
         new_function.params.data[param] = new_name;
     }
 
     if (new_function.body.is_some && !global) {
-        panic("Erm it kindaaa needs to be global");
+        panic("Erm it kindaaa needs to be global\n");
     }
 
     if (new_function.body.is_some)
@@ -255,11 +290,25 @@ Declaration resolve_identifiers_declaration(Declaration declaration, IdentifierT
 
 VariableDeclaration resolve_identifiers_variable_declaration(VariableDeclaration declaration, IdentifierTable* table) {
     char* old_name = declaration.identifier;
-    char* new_name = idents_mangle_name(declaration.identifier, table->length);
-    if (!identifier_table_can_redefine(table, old_name)) {
-        panic("Variable %s already defined in same scope\n", old_name);
+    
+    int prev_index = identifier_table_get_index(table, old_name);
+    if (prev_index >= 0) {
+        IdentifierTableEntry prev_entry = identifier_table_get(table, prev_index);
+        if (prev_entry.from_current_scope) {
+            if (!(prev_entry.has_linkage && declaration.storage_class==StorageClass_EXTERN)) {
+                panic("Those conflict DUMBASS\n");
+            }
+        }
     }
-    identifier_table_insert(table, old_name, new_name, 1);
+
+    if (declaration.storage_class==StorageClass_EXTERN) {
+        identifier_table_insert(table, old_name, old_name, true, true);
+        return declaration;
+    }
+
+    char* new_name = idents_mangle_name(declaration.identifier, table->length);
+
+    identifier_table_insert(table, old_name, new_name, true, false);
     declaration.identifier = new_name;
 
     if (declaration.expression.is_some) {

@@ -1,19 +1,20 @@
 #ifndef CODE_GEN_H
 #define CODE_GEN_H
 
-#include "ir.h"
-#include "easy_stuff.h"
+#include "../ir.h"
+#include "../easy_stuff.h"
 
 typedef enum CodegenOperandType {
     CodegenOperandType_REGISTER,
     CodegenOperandType_IMMEDIATE,
     CodegenOperandType_PSEUDO,
     CodegenOperandType_STACK,
+    CodegenOperandType_DATA,
 } CodegenOperandType;
 
 typedef union CodegenOperandValue {
     int num;
-    char* pseudo;
+    char* identifier;
 } CodegenOperandValue;
 
 typedef struct CodegenOperand {
@@ -79,7 +80,10 @@ typedef union CodegenInstructionValue {
     } two_op;
     struct {
         CodegenOperand address;
-        int offset;
+        union {
+            int num;
+            char* data;
+        } offset;
         CodegenOperand reg;
     } mem;
     int immediate;
@@ -122,14 +126,32 @@ typedef struct CodegenFunctionDefinition {
     CodegenFunctionBody body;
 } CodegenFunctionDefinition;
 
+typedef struct CodegenStatic {
+    char* identifier;
+    int global;
+    int init;
+} CodegenStatic;
+
+typedef struct CodegenTopLevel {
+    enum {
+        CGTStatic,
+        CGTFunction
+    } ty;
+    union {
+        CodegenStatic static_var;
+        CodegenFunctionDefinition function;
+    } val;
+} CodegenTopLevel;
+
 typedef struct CodegenProgram {
-    CodegenFunctionDefinition* data;
+    CodegenTopLevel* data;
     int length;
     int capacity;
 } CodegenProgram;
 
 CodegenProgram codegen_generate_program(IRProgram program);
 CodegenFunctionDefinition codegen_generate_function(IRFunctionDefinition function);
+CodegenStatic codegen_generate_static(IRStaticVariable var);
 // takes statement and vec of instructions and returns the number of instructions
 void codegen_generate_instruction(IRInstruction instruction, CodegenFunctionBody* instructions);
 CodegenOperand codegen_convert_val(IRVal val, CodegenFunctionBody* instructions);

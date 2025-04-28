@@ -2,7 +2,7 @@
 
 #include "type_checking.h"
 
-void typecheck_program(ParserProgram* program) {
+TCSymbols typecheck_program(ParserProgram* program) {
     TCSymbols symbols = {
         .capacity = 0,
         .data = NULL,
@@ -10,24 +10,90 @@ void typecheck_program(ParserProgram* program) {
     };
 
     for (int fn=0;fn<program->length;fn++) {
-        typecheck_function(&program->data[fn], &symbols); // we could just do pointer math (x+y), but its more clear whats happening here
+        Declaration decl = program->data[fn];
+        if (decl.type == DeclarationType_Function) {
+            typecheck_function(&decl.value.function, &symbols);
+        } else {
+            typecheck_file_scope_var(decl.value.variable, &symbols);
+        }
+    }
+
+    return symbols;
+}
+
+int symbols_index_of(char* name, TCSymbols* symbols) {
+    for (int i=0;i<symbols->length;i++) {
+        if (!strcmp(name,symbols->data[i].name)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int ty_compare(Type* type_one, Type* type_two) {
+    if (type_one->type_ty != type_two->type_ty) {
+        return false;
+    }
+    switch (type_one->type_ty) {
+        case TypeEnum_Fn: {
+            return type_one->type_data.fn.length == type_two->type_data.fn.length;
+            break;
+        }
+        case TypeEnum_Int: {
+            return true;
+            break;
+        }
+        default: {
+            return false; // unreachable
+        }
     }
 }
 
 void typecheck_function(FunctionDefinition* function, TCSymbols* symbols) {
+    Type ty = {
+        .type_ty=TypeEnum_Fn,
+        .type_data={
+            .fn={.length=function->params.length}
+        }
+    };
+    int has_body=function->body.is_some;
+    int alread_defined = false;
+    int global = function->storage_class != StorageClass_STATIC;
+    
+    int prev_idx = symbols_index_of(function->identifier, symbols);
+    if (prev_idx >= 0) {
+        TCSEntry prev_entry = symbols->data[prev_idx];
+        if (!ty_compare(&prev_entry.type, &ty)) {
+            panic("Incompatible function declarations\n");
+        }
+        alread_defined = prev_entry.attrs.vals.FunAttr.defined;
+        if (alread_defined && has_body) {
+            panic("Function defined more than once\n");
+        }
+
+        if (prev_entry.attrs.vals.FunAttr.global && function->storage_class==StorageClass_STATIC) {
+            panic("Static declaration follows non-static");
+        }
+        global = prev_entry.attrs.vals.FunAttr.global;
+    }
+
     // register the function
     TCSEntry fn_entry = {
         .name = function->identifier,
-        .type = {
-            .type_ty = TypeEnum_Fn,
-            .type_data = {
-                .fn = {
-                    .length = function->params.length
+        .type = ty,
+        .attrs = {
+            .ty = IAFunAttr,
+            .vals = {
+                .FunAttr = {
+                    .global = global,
+                    .defined = alread_defined || has_body
                 }
             }
         }
     };
     vecptr_push(symbols, fn_entry);
+
+
     for (int param=0;param<function->params.length;param++) {
         TCSEntry param_entry = {
             .name = function->params.data[param],
@@ -42,6 +108,75 @@ void typecheck_function(FunctionDefinition* function, TCSymbols* symbols) {
     if (function->body.is_some) {
         typecheck_block(&function->body.data, symbols);
     }
+}
+
+void typecheck_file_scope_var(VariableDeclaration var, TCSymbols* symbols) {
+    InitialVal initial;
+    if (!var.expression.is_some) {
+        if (var.storage_class == StorageClass_EXTERN) {
+            initial = (InitialVal){
+                .ty = IVNone,
+                .val = 0
+            };
+        } else {
+            initial = (InitialVal){
+                .ty=IVTentative,
+                .val=0
+            };
+        }
+    } else if (var.expression.data.type == ExpressionType_INT) {
+        initial = (InitialVal){
+            .ty=IVInitial,
+            .val=var.expression.data.value.integer
+        };
+    } else {
+        panic("Non-constant static init\n");
+    }
+
+    int global = var.storage_class != StorageClass_STATIC;
+
+    int old_decl_idx = symbols_index_of(var.identifier, symbols);
+    if (old_decl_idx >= 0) {
+        TCSEntry old_decl = symbols->data[old_decl_idx];
+
+        if (old_decl.type.type_ty == TypeEnum_Fn) {
+            panic("Function redeclared as a variable\n");
+        }
+
+        if (var.storage_class == StorageClass_EXTERN) {
+            global = old_decl.attrs.vals.StaticAttr.global;
+        } else if (old_decl.attrs.vals.StaticAttr.global != global) {
+            panic("Conflicting static var linkage\n");
+        }
+
+        if (old_decl.attrs.vals.StaticAttr.init.ty == IVInitial) {
+            if (initial.ty == IVInitial) {
+                panic("Conflicting file scope variable declarations\n");
+            } else {
+                initial = old_decl.attrs.vals.StaticAttr.init;
+            }
+        } else if (initial.ty != IVInitial && old_decl.attrs.vals.StaticAttr.init.ty == IVTentative) {
+            initial.ty = IVTentative;
+        }
+    }
+
+    TCSEntry new_entry = {
+        .name = var.identifier,
+        .type = (Type){
+            .type_ty=TypeEnum_Int,
+            .type_data={.none=0}
+        },
+        .attrs = (IdentAttrs){
+            .ty = IAStaticAttr,
+            .vals = {
+                .StaticAttr = {
+                    .global = global,
+                    .init = initial
+                }
+            }
+        }
+    };
+    vecptr_push(symbols, new_entry)
 }
 
 void typecheck_block(ParserBlock* block, TCSymbols* symbols) {
@@ -69,17 +204,90 @@ void typecheck_block(ParserBlock* block, TCSymbols* symbols) {
 }
 
 void typecheck_variable_declaration(VariableDeclaration* var, TCSymbols* symbols) {
-    TCSEntry param_entry = {
-        .name = var->identifier,
-        .type = {
-            .type_ty = TypeEnum_Int,
-            .type_data = {.none = 0}
+    if (var->storage_class == StorageClass_EXTERN) {
+        if (var->expression.is_some) {
+            panic("Cannot have init on local extern variable");
         }
-    };
-    vecptr_push(symbols, param_entry);
+        int old_decl_idx = symbols_index_of(var->identifier, symbols);
+        if (old_decl_idx >= 0) {
+            TCSEntry old_decl = symbols->data[old_decl_idx];
+            if (old_decl.type.type_ty == TypeEnum_Fn) {
+                panic("Function redeclared as variable");
+            }
+        } else {
+            TCSEntry new_entry = {
+                .name=var->identifier,
+                .type=(Type){
+                    .type_ty=TypeEnum_Int,
+                    .type_data={
+                        .none=0
+                    }
+                },
+                .attrs={
+                    .ty=IAStaticAttr,
+                    .vals={
+                        .StaticAttr={
+                            .global=true,
+                            .init={
+                                .ty=IVNone,
+                                .val=0
+                            }
+                        }
+                    }
+                }
+            };
+            vecptr_push(symbols, new_entry);
+        }
+    } else if (var->storage_class == StorageClass_STATIC) {
+        InitialVal inital;
+        if (!var->expression.is_some) {
+            inital = (InitialVal){
+                .ty=IVInitial,
+                .val=0
+            };
+        } else if (var->expression.data.type == ExpressionType_INT) {
+            inital = (InitialVal){
+                .ty=IVInitial,
+                .val=var->expression.data.value.integer
+            };
+        } else {
+            panic("Non-const init on local static var");
+        }
 
-    if (var->expression.is_some) {
-        typecheck_expression(&var->expression.data, symbols);
+        TCSEntry entry = {
+            .attrs = {
+                .ty=IAStaticAttr,
+                .vals={
+                    .StaticAttr={
+                        .init=inital,
+                        .global=false
+                    }
+                }
+            },
+            .name=var->identifier,
+            .type={
+                .type_ty=TypeEnum_Int,
+                .type_data={.none=0}
+            }
+        };
+        vecptr_push(symbols, entry);
+    } else {
+        TCSEntry entry = {
+            .name = var->identifier,
+            .type = {
+                .type_ty = TypeEnum_Int,
+                .type_data = {.none = 0}
+            },
+            .attrs = {
+                .ty = IALocalAttr,
+                .vals={.none=0}
+            }
+        };
+        vecptr_push(symbols, entry);
+
+        if (var->expression.is_some) {
+            typecheck_expression(&var->expression.data, symbols);
+        }
     }
 }
 

@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #include "assembley_fixup.h"
-#include "easy_stuff.h"
+#include "../easy_stuff.h"
 
 int is_imm(CodegenOperandType ty) {
     return ty == CodegenOperandType_IMMEDIATE;
@@ -13,10 +13,23 @@ int is_reg(CodegenOperandType ty) {
 }
 
 int is_stack(CodegenOperandType ty) {
-    return ty == CodegenOperandType_STACK;
+    return ty == CodegenOperandType_STACK || ty == CodegenOperandType_DATA;
 }
 
 void move_mem_to_register(CodegenOperand op, int target_reg, CodegenFunctionBody* instructions) {
+    if (op.type == CodegenOperandType_DATA) {
+        CodegenInstruction lod = {
+            .type=CodegenInstructionType_LOD,
+            .value.mem={
+                .address=op,
+                .reg=1,
+                .offset=1,
+            }
+        };
+        vecptr_push(instructions, lod);
+        return;
+    }
+    
     CodegenOperand base_ptr = {
         .type = CodegenOperandType_REGISTER,
         .value = {
@@ -36,7 +49,7 @@ void move_mem_to_register(CodegenOperand op, int target_reg, CodegenFunctionBody
         .value = {
             .mem = {
                 .address = base_ptr,
-                .offset = op.value.num, // stack offset
+                .offset.num = op.value.num, // stack offset
                 .reg = target,
             },
         },
@@ -92,9 +105,26 @@ void move_to_reg(CodegenOperand op, int target_reg, CodegenFunctionBody* instruc
 CodegenProgram fixup_program(struct ReplaceResult program) {
     CodegenProgram new_program = {NULL, 0, 0};
 
-    for (int i = 0; i < program.length; i++) {
-        CodegenFunctionDefinition function = fixup_function(program.data[i]);
-        vec_push(new_program, function);
+    int current_offset = 0;
+    for (int i = 0; i < program.program.length; i++) {
+        CodegenTopLevel tl;
+        if (program.program.data[i].ty == CGTFunction) {
+            struct FuncAndOffset fao = {
+                .function=program.program.data[i].val.function,
+                .offset=program.offsets.data[current_offset++]
+            };
+            CodegenFunctionDefinition function = fixup_function(fao);
+            tl = (CodegenTopLevel){
+                .ty=CGTFunction,
+                .val.function=function
+            };
+        } else {
+            tl = (CodegenTopLevel){
+                .ty=CGTStatic,
+                .val.static_var=program.program.data[i].val.static_var
+            };
+        }
+        vec_push(new_program, tl);
     }
 
     return new_program;
@@ -144,7 +174,7 @@ void reg_to_mem(int reg, int offset, CodegenFunctionBody* body) {
         .value = {
             .mem = {
                 .address = base_ptr,
-                .offset = offset,
+                .offset.num = offset,
                 .reg = source,
             },
         },
@@ -182,7 +212,7 @@ void move_to_mem(CodegenOperand op, int offset, CodegenFunctionBody* body) {
                             .num = 15,
                         },
                     },
-                    .offset = offset,
+                    .offset.num = offset,
                     .reg = {
                         .type = CodegenOperandType_REGISTER,
                         .value = {
@@ -255,6 +285,10 @@ void handle_mov_like(CodegenInstruction instruction, CodegenFunctionBody* body) 
                 }
                 case CodegenOperandType_STACK: {
                     move_to_mem(instruction.value.two_op.source, instruction.value.two_op.destination.value.num, body);
+                    break;
+                }
+                case CodegenOperandType_DATA: {
+                    vecptr_push(body, instruction);
                     break;
                 }
                 

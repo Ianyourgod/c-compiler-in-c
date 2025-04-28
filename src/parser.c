@@ -5,6 +5,11 @@
 #include "parser.h"
 #include "easy_stuff.h"
 
+typedef struct TypeAndClass {
+    Type ty;
+    StorageClass class;
+} TypeAndClass;
+
 Parser parser_new(Token* tokens, int token_count) {
     Parser parser = {tokens, 0, token_count};
     return parser;
@@ -20,7 +25,7 @@ ParserProgram parser_parse(Parser* parser) {
             panic("static variables more like bad-ic variables OOOOHHHH");
         }
 
-        vec_push(program, decl.value.function);
+        vec_push(program, decl);
     }
 
     return program;
@@ -61,10 +66,81 @@ ParserBlock parser_parse_block(Parser* parser) {
     return block;
 }
 
+TypeAndClass parse_type_and_storage_class(TokenStream stream) {
+    int current_type = 0;
+    Type types[stream.length];
+    memset(types, 0, sizeof(Type)*stream.length);
+    StorageClass storage_class = StorageClass_DEFAULT;
+
+    for (int i=0;i<stream.length;i++) {
+        Token item = stream.data[i];
+
+        if (item.type != TokenType_KEYWORD) {
+            panic("unexpected non keyword in type/storage class");
+        }
+
+        switch (item.value.keyword) {
+            case Keyword_INT: {
+                types[current_type++] = (Type){
+                    .type_ty = TypeEnum_Int,
+                    .type_data = {.none = 0}
+                };
+                break;
+            }
+            case Keyword_STATIC: {
+                if (storage_class != StorageClass_DEFAULT) {
+                    panic("Cannot have multiple storage classes");
+                }
+                storage_class = StorageClass_STATIC;
+                break;
+            }
+            case Keyword_EXTERN: {
+                if (storage_class != StorageClass_DEFAULT) {
+                    panic("Cannot have multiple storage classes");
+                }
+                storage_class = StorageClass_EXTERN;
+                break;
+            }
+            default: {
+                panic("unexpected keyword in type/storage class");
+                break;
+            }
+        }
+    }
+
+    if (current_type > 1) {
+        panic("Only one type specifier rn yall");
+    }
+
+    if (current_type < 1) {
+        panic("you gotta have SOMETHING for the type");
+    }
+
+    return (TypeAndClass){
+        .ty = types[0],
+        .class = storage_class,
+    };
+}
+
 Declaration parser_parse_declaration(Parser* parser) {
     Declaration declaration = {0};
 
-    parser_expect_token(parser, (Token){.type = TokenType_KEYWORD, .value.keyword = Keyword_INT});
+    TokenStream stream = {
+        .capacity=0,
+        .data=NULL,
+        .length=0,
+    };
+
+    while (parser->tokens[parser->index].type == TokenType_KEYWORD) {
+        vec_push(stream, parser_next_token(parser));
+    }
+
+    TypeAndClass ty_and_class = parse_type_and_storage_class(stream);
+
+    Type ty = ty_and_class.ty;
+    StorageClass class = ty_and_class.class;
+
+    (void)ty; // unused
 
     Token identifier = parser_next_token(parser);
 
@@ -76,6 +152,7 @@ Declaration parser_parse_declaration(Parser* parser) {
         declaration.type = DeclarationType_Function;
 
         declaration.value.function.identifier = identifier.value.identifier;
+        declaration.value.function.storage_class = class;
 
         parser_next_token(parser);
         // get the arguments
@@ -123,6 +200,7 @@ Declaration parser_parse_declaration(Parser* parser) {
         // variable
         declaration.type = DeclarationType_Variable;
         declaration.value.variable.identifier = identifier.value.identifier;
+        declaration.value.variable.storage_class = class;
         
         Token peek = parser_peek(parser);
 
@@ -721,7 +799,11 @@ char* expression_to_string(Expression expression) {
 
 void free_program(ParserProgram program) {
     for (int i = 0; i < program.length; i++) {
-        free_function_definition(program.data[i]);
+        if (program.data[i].type == DeclarationType_Function) {
+            free_function_definition(program.data[i].value.function);
+        } else {
+            free_variable_declaration(program.data[i].value.variable);
+        }
     }
     free(program.data);
 }

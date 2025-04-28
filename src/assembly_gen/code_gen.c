@@ -2,17 +2,45 @@
 #include <stdio.h>
 
 #include "code_gen.h"
-#include "easy_stuff.h"
+#include "../easy_stuff.h"
 
 CodegenProgram codegen_generate_program(IRProgram program) {
     CodegenProgram codegen_program = {NULL, 0, 0};
 
     for (int i = 0; i < program.length; i++) {
-        CodegenFunctionDefinition function = codegen_generate_function(program.data[i]);
-        vec_push(codegen_program, function);
+        CodegenTopLevel tl;
+
+        switch (program.data[i].ty) {
+            case IRTFunction: {
+                CodegenFunctionDefinition function = codegen_generate_function(program.data[i].val.function);
+                tl = (CodegenTopLevel){
+                    .ty=CGTFunction,
+                    .val.function=function
+                };
+                break;
+            }
+            case IRTStatic: {
+                CodegenStatic var = codegen_generate_static(program.data[i].val.static_var);
+                tl = (CodegenTopLevel){
+                    .ty=CGTStatic,
+                    .val.static_var=var
+                };
+                break;
+            }
+        }
+
+        vec_push(codegen_program, tl);
     }
 
     return codegen_program;
+}
+
+CodegenStatic codegen_generate_static(IRStaticVariable var) {
+    return (CodegenStatic){
+        .global=var.global,
+        .identifier=var.identifier,
+        .init=var.init
+    };
 }
 
 CodegenFunctionDefinition codegen_generate_function(IRFunctionDefinition function) {
@@ -38,7 +66,7 @@ CodegenFunctionDefinition codegen_generate_function(IRFunctionDefinition functio
                     .destination = {
                         .type = CodegenOperandType_PSEUDO,
                         .value = {
-                            .pseudo = function.params.data[reg_a]
+                            .identifier = function.params.data[reg_a]
                         }
                     }
                 }
@@ -61,7 +89,7 @@ CodegenFunctionDefinition codegen_generate_function(IRFunctionDefinition functio
                     .destination = {
                         .type = CodegenOperandType_PSEUDO,
                         .value = {
-                            .pseudo = function.params.data[stack_a]
+                            .identifier = function.params.data[stack_a]
                         }
                     }
                 }
@@ -415,7 +443,7 @@ CodegenOperand codegen_convert_val(IRVal val, CodegenFunctionBody* instructions)
             return operand;
         }
         case IRValType_Var: {
-            CodegenOperand operand = {CodegenOperandType_PSEUDO, .value.pseudo = val.value.var};
+            CodegenOperand operand = {CodegenOperandType_PSEUDO, .value.identifier = val.value.var};
             return operand;
         }
         default:

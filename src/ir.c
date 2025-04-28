@@ -7,21 +7,76 @@
 #include "ir.h"
 #include "easy_stuff.h"
 
-IRGenerator ir_generator_new(SwitchCases* switch_cases) {
-    return (IRGenerator){0, switch_cases};
+IRGenerator ir_generator_new(SwitchCases* switch_cases, TCSymbols* symbol_table) {
+    return (IRGenerator){
+        .tmp_count=0,
+        .switch_cases=switch_cases,
+        .symbol_table=symbol_table,
+    };
+}
+
+void convert_symbols_to_tacky(TCSymbols* symbol_table, IRProgram* program) {
+    for (int i=0;i<symbol_table->length;i++) {
+        if (symbol_table->data[i].attrs.ty==IAStaticAttr) {
+            IdentAttrs attr = symbol_table->data[i].attrs;
+            InitialVal init = attr.vals.StaticAttr.init;
+
+            char* name = symbol_table->data[i].name;
+            switch (init.ty) {
+                case IVInitial: {
+                    IRStaticVariable sv = {
+                        .identifier=name,
+                        .global=attr.vals.StaticAttr.global,
+                        .init=init.val
+                    };
+                    IRTopLevel tl = {
+                        .ty=IRTStatic,
+                        .val={.static_var=sv}
+                    };
+                    vecptr_push(program, tl);
+                    break;
+                }
+                case IVTentative: {
+                    IRStaticVariable sv = {
+                        .identifier=name,
+                        .global=attr.vals.StaticAttr.global,
+                        .init=0
+                    };
+                    IRTopLevel tl = {
+                        .ty=IRTStatic,
+                        .val={.static_var=sv}
+                    };
+                    vecptr_push(program, tl);
+                    break;
+                }
+                case IVNone: {
+                    break;
+                }
+            }
+        }
+    }
 }
 
 IRProgram ir_generate_program(IRGenerator* generator, ParserProgram program) {
     IRProgram ir_program = {0};
 
     for (int i = 0; i < program.length; i++) {
-        IROptionalFN fn = ir_generate_function(generator, program.data[i], i);
-        if (!fn.is_some) {
-            continue;
+        if (program.data[i].type == DeclarationType_Function) {
+            IROptionalFN fn = ir_generate_function(generator, program.data[i].value.function, i);
+            if (!fn.is_some) {
+                continue;
+            }
+            IRTopLevel tl = {
+                .ty=IRTFunction,
+                .val={
+                    .function=fn.data
+                }
+            };
+            vec_push(ir_program, tl);
         }
-        IRFunctionDefinition function = fn.data;
-        vec_push(ir_program, function);
     }
+
+    convert_symbols_to_tacky(generator->symbol_table, &ir_program);
 
     return ir_program;
 }
@@ -29,7 +84,7 @@ IRProgram ir_generate_program(IRGenerator* generator, ParserProgram program) {
 IROptionalFN ir_generate_function(IRGenerator* generator, FunctionDefinition function, int function_idx) {
     IRFunctionDefinition ir_function = {0};
     ir_function.identifier = function.identifier;
-    ir_function.global = 1;
+    ir_function.global = generator->symbol_table->data[symbols_index_of(function.identifier, generator->symbol_table)].attrs.vals.FunAttr.global;
     ir_function.body = (IRFunctionBody) { NULL, 0, 0 };
 
     if (!function.body.is_some) {

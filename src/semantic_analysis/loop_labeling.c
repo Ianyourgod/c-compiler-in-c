@@ -4,11 +4,17 @@
 #include <stdlib.h>
 
 struct ProgramAndStructs label_loops(ParserProgram program) {
-    SwitchCases* switch_cases = malloc_n_type(SwitchCases, program.length);
+    int switch_case_count;
+    for (int k=0;k<program.length;k++) if (program.data[k].type==DeclarationType_Function) switch_case_count++;
+
+    SwitchCases* switch_cases = malloc_n_type(SwitchCases, switch_case_count);
     for (int i = 0; i < program.length; i++) {
-        struct FuncAndStructs result = label_loops_function(program.data[i]);
-        program.data[i] = label_loops_function(program.data[i]).function;
-        switch_cases[i] = result.switch_cases;
+        Declaration current_decl = program.data[i];
+        if (current_decl.type == DeclarationType_Function) {
+            struct FuncAndStructs result = label_loops_function(current_decl.value.function);
+            program.data[i] = (Declaration){.type=DeclarationType_Function,.value={.function=result.function}};
+            switch_cases[i] = result.switch_cases;
+        }
     }
     return (struct ProgramAndStructs){program, switch_cases, program.length};
 }

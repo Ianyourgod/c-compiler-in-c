@@ -5,10 +5,16 @@
 #include "easy_stuff.h"
 
 typedef struct ParserProgram {
-    struct FunctionDefinition* data;
+    struct Declaration* data;
     int length;
     int capacity;
 } ParserProgram;
+
+typedef enum StorageClass {
+    StorageClass_STATIC,
+    StorageClass_EXTERN,
+    StorageClass_DEFAULT,
+} StorageClass;
 
 typedef struct ParserBlock {
     struct BlockItem* statements;
@@ -136,11 +142,13 @@ typedef struct FunctionDefinition {
         int capacity;
     } params;
     BlockOption body;
+    StorageClass storage_class;
 } FunctionDefinition;
 
 typedef struct VariableDeclaration {
     char* identifier;
     Option(struct Expression) expression; // optional
+    StorageClass storage_class;
 } VariableDeclaration;
 
 typedef struct Declaration {

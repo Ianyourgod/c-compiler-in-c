@@ -4,12 +4,19 @@
 #include "parser.h"
 #include "easy_stuff.h"
 #include "semantic_analysis/loop_labeling.h"
+#include "semantic_analysis/type_checking.h"
 
 typedef struct IRProgram {
-    struct IRFunctionDefinition* data;
+    struct IRTopLevel* data;
     int length;
     int capacity;
 } IRProgram;
+
+typedef struct IRStaticVariable {
+    char* identifier;
+    int global;
+    int init;
+} IRStaticVariable;
 
 typedef enum IRInstructionType {
     IRInstructionType_Unary,
@@ -113,16 +120,26 @@ typedef struct IRFunctionDefinition {
     IRFunctionBody body;
 } IRFunctionDefinition;
 
+typedef struct IRTopLevel {
+    enum {
+        IRTStatic,
+        IRTFunction,
+    } ty;
+    union {
+        IRStaticVariable static_var;
+        IRFunctionDefinition function;
+    } val;
+} IRTopLevel;
 
 typedef struct IRGenerator {
     int tmp_count;
     SwitchCases* switch_cases;
-
+    TCSymbols* symbol_table;
 } IRGenerator;
 
 typedef Option(IRFunctionDefinition) IROptionalFN;
 
-IRGenerator ir_generator_new(SwitchCases* switch_cases);
+IRGenerator ir_generator_new(SwitchCases* switch_cases, TCSymbols* symbol_table);
 IRProgram ir_generate_program(IRGenerator* generator, ParserProgram program);
 IROptionalFN ir_generate_function(IRGenerator* generator, FunctionDefinition function, int function_idx);
 void ir_generate_block(IRGenerator* generator, ParserBlock block, IRFunctionBody* instructions, int function_idx);
